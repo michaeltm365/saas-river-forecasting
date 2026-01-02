@@ -1,0 +1,106 @@
+# =============================================================================
+# RGCN Model Configuration
+# =============================================================================
+# This configuration file controls all parameters for training the Recurrent
+# Graph Convolutional Network (RGCN) on the HJA watershed data.
+
+# -----------------------------------------------------------------------------
+# Paths
+# -----------------------------------------------------------------------------
+paths:
+  data_root: "/data/kripat/usgs-gnn"
+  graph_pickle: "graph_builder/graph/hja_graph.gpickle"
+  edge_index: "graph_builder/graph/hja_edge_index.npz"
+  checkpoints_dir: "checkpoints/rgcn"
+  logs_dir: "logs/rgcn"
+
+# -----------------------------------------------------------------------------
+# Model Architecture
+# -----------------------------------------------------------------------------
+model:
+  # Which RGCN variant to use: "v0" (river-dl) or "v1" (Jia et al. 2020)
+  version: "v2"
+  
+  # Number of input features (e.g., gridmet driver columns)
+  input_dim: 11
+  
+  # Hidden state dimension (h)
+  # v0 adds 6h² + 4h params, v1 adds h² + h params
+  hidden_dim: 64
+  
+  # Dropout applied to input features
+  dropout: 0.1
+  
+  # Recurrent dropout applied to cell update candidate (g_t)
+  recur_dropout: 0.0
+  
+  # Whether to return final hidden/cell states with predictions
+  return_states: false
+
+# -----------------------------------------------------------------------------
+# Training
+# -----------------------------------------------------------------------------
+training:
+  # Number of training epochs
+  epochs: 100
+  
+  # Batch size (should be divisible by n_segments for proper adjacency alignment)
+  batch_size: 1586
+  
+  # Sequence length (number of timesteps per sample)
+  seq_length: 28
+  
+  # Loss weights when combining regression (Discharge_CMS) and classification (HoboWetDry)
+  lambda_discharge: 1.0
+  lambda_wetdry: 0.5
+  
+  # Learning rate
+  learning_rate: 0.001
+  
+  # Weight decay (L2 regularization)
+  weight_decay: 0.0001
+  
+  # Gradient clipping max norm (0 to disable)
+  grad_clip: 1.0
+  
+  # Early stopping patience (epochs without improvement before stopping)
+  early_stopping_patience: 20
+  
+  # Random seed for reproducibility
+  seed: 42
+
+# -----------------------------------------------------------------------------
+# Data
+# -----------------------------------------------------------------------------
+data:
+  # Train/val/test split ratios
+  train_ratio: 0.7
+  val_ratio: 0.15
+  test_ratio: 0.15
+  
+  # Date range for training data
+  start_date: "1980-01-01"
+  end_date: "2020-12-31"
+  
+  # Target variable column name in obs data
+  target_col: "value"
+  
+  # Whether to normalize features
+  normalize: true
+  
+  # Features to use from gridmet (null = use all)
+  driver_features: null
+
+# -----------------------------------------------------------------------------
+# Logging
+# -----------------------------------------------------------------------------
+logging:
+  # Log training metrics every N batches
+  log_interval: 1
+  
+  # Save checkpoint every N epochs
+  save_interval: 1
+  
+  # Use tensorboard logging
+  use_tensorboard: true
+

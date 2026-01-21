@@ -2,7 +2,7 @@
 # RGCN Model Configuration
 # =============================================================================
 # This configuration file controls all parameters for training the Recurrent
-# Graph Convolutional Network (RGCN) on the HJA watershed data.
+# Graph Convolutional Network (RGCN) on the HJ Andrews watershed data.
 
 # -----------------------------------------------------------------------------
 # Paths

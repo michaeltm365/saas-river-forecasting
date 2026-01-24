@@ -1,6 +1,6 @@
 # Multimodal Streamflow Forecasting in Sparse Networks
 
-**Addressing Data Scarcity and Static Feature Memorization**
+**Addressing Data Scarcity and Spatial Generalization**
 
 [![USGS](https://img.shields.io/badge/USGS-Collaboration-green)](https://www.usgs.gov/)
 

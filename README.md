@@ -31,6 +31,36 @@ Our analysis reveals a fundamental "static feature memorization" problem where c
 └── README.md
 ```
 
+## Model Weights
+
+Pre-trained model weights and processed data are available on Hugging Face:
+
+🤗 **[michaeltm365/saas-river-forecasting](https://huggingface.co/michaeltm365/saas-river-forecasting)**
+
+### Quick Download
+```python
+from huggingface_hub import hf_hub_download
+
+# Download GNN model weights
+model_path = hf_hub_download(
+    repo_id="michaeltm365/saas-river-forecasting", 
+    filename="best_model.pt"
+)
+
+# Download graph structure
+graph_path = hf_hub_download(
+    repo_id="michaeltm365/saas-river-forecasting", 
+    filename="hja_graph.gpickle"
+)
+```
+
+**Files available:**
+- `best_model.pt` - Pre-trained GNN model weights  
+- `hja_graph.gpickle` - H.J. Andrews stream network topology
+- `hja_edge_index.npz` - Graph connectivity matrix
+- `static_vars_pivot.csv` - Watershed characteristics
+- Additional supporting data files
+
 ## Data
 
 This project uses data from the H.J. Andrews Forest Long-Term Ecological Research site, including:
@@ -81,6 +111,7 @@ imbalanced-learn
 optuna
 matplotlib
 seaborn
+huggingface_hub
 ```
 
 For GNN:

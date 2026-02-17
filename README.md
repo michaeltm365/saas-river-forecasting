@@ -1,6 +1,4 @@
-# Multimodal Streamflow Forecasting in Sparse Networks
-
-**Addressing Data Scarcity and Spatial Generalization**
+# Evaluating Data-Driven Models for Multimodal Prediction of Headwater Streamflow
 
 [![USGS](https://img.shields.io/badge/USGS-Collaboration-green)](https://www.usgs.gov/)
 
@@ -11,23 +9,24 @@ This repository contains the code and analysis for our research on machine learn
 - **Logistic Regression** - Baseline classical approach
 - **XGBoost** - Gradient-boosted decision trees
 - **LSTM** - Long Short-Term Memory neural networks for temporal modeling
-- **GNN** - Graph Neural Networks for spatial-temporal modeling
-
-Our analysis reveals a fundamental "static feature memorization" problem where classical models achieve high accuracy (0.97-0.99) on standard train-test splits but fail dramatically on site-based evaluations, while Graph Neural Networks maintain ~0.99 accuracy across all evaluation schemes by leveraging spatial topology.
+- **RGCN** - Recurrent Graph Convolutional Networks for spatial-temporal modeling
 
 ## Repository Structure
 
 ```
 ├── lr/
-│   └── lr.ipynb              # Logistic Regression model
+│   └── lr.ipynb                # Logistic Regression model
 ├── xgb/
-│   └── xgb.ipynb             # XGBoost model
+│   └── xgb.ipynb               # XGBoost model
 ├── lstm/
-│   └── lstm.ipynb            # LSTM model
-├── gnn/
-│   └── train_gnn.ipynb       # Graph Neural Network model
+│   ├── lstm_all_sites.ipynb    # LSTM on combined HOBO + discretized discharge data
+│   └── lstm_hobo_sites.ipynb   # LSTM on HOBO sensor sites only
+├── rgcn/
+│   ├── train_gnn.ipynb         # Graph Neural Network model
+│   ├── build_graph.ipynb       # Stream network graph construction
+│   └── rgcn_config.yaml        # RGCN model configuration
 ├── synthetic_data/
-│   └── gam.ipynb             # GAM-based synthetic data generation
+│   └── gam.ipynb               # GAM-based synthetic data generation
 └── README.md
 ```
 
@@ -41,7 +40,7 @@ Pre-trained model weights and processed data are available on Hugging Face:
 ```python
 from huggingface_hub import hf_hub_download
 
-# Download GNN model weights
+# Download RGCN model weights
 model_path = hf_hub_download(
     repo_id="michaeltm365/saas-river-forecasting", 
     filename="best_model.pt"
@@ -55,7 +54,7 @@ graph_path = hf_hub_download(
 ```
 
 **Files available:**
-- `best_model.pt` - Pre-trained GNN model weights  
+- `best_model.pt` - Pre-trained RGCN model weights  
 - `hja_graph.gpickle` - H.J. Andrews stream network topology
 - `hja_edge_index.npz` - Graph connectivity matrix
 - `static_vars_pivot.csv` - Watershed characteristics
@@ -72,12 +71,11 @@ This project uses data from the H.J. Andrews Forest Long-Term Ecological Researc
 
 **Note**: Data files are not included in this repository. Please contact the authors or USGS for data access.
 
-## Methodological Innovations
+## Data Augmentations
 
 1. **Discharge Discretization**: Threshold-based conversion (0.00014 CMS) of continuous measurements to binary wet/dry
 2. **Time-Series ADASYN**: Adapted resampling preserving temporal autocorrelation within sliding windows
 3. **Synthetic Data via GAMs**: Generalized Additive Models for augmenting sparse observation sites (RMSE=1.33)
-4. **Multi-objective Loss**: Joint optimization of regression and classification tasks for GNNs
 
 ## Evaluation Framework
 
@@ -88,15 +86,6 @@ Three train-test splitting strategies for Logistic Regression and XGBoost:
 | Random | Standard ML benchmarking | General performance |
 | Temporal | Chronological split | Forecasting ability |
 | Site-based | Entire sites withheld | Spatial generalizability |
-
-## Results Summary
-
-| Model | Random Split | Temporal Split | Site-based Split |
-|-------|--------------|----------------|------------------|
-| Logistic Regression | 0.97-0.99 | 0.97-0.99 | 0.93 |
-| XGBoost | 0.98 | 0.95 | 0.65 |
-| LSTM | ~0.90 | ~0.90 | ~0.90 |
-| GNN | ~0.99 | ~0.99 | ~0.99 |
 
 ## Requirements
 
@@ -114,7 +103,7 @@ seaborn
 huggingface_hub
 ```
 
-For GNN:
+For RGCN:
 ```
 torch-geometric
 ```
@@ -148,8 +137,7 @@ If you use this code or findings in your research, please cite:
 ```
 Huang, A., Prieto, C., Murphy, M., Kandadai, A., Wang, A., Yu, A., Krishnan, A.,
 Danes, A., Wong, A., Patel, K., Iyer, S., Dubey, V., Nguyen, V., Zwart, J.,
-Cook, G., & Chelgren, N. (2025). Multimodal Streamflow Forecasting in Sparse
-Networks: Addressing Data Scarcity and Static Feature Memorization.
+Cook, G., & Chelgren, N. (2025). Evaluating Data-Driven Models for Multimodal Prediction of Headwater Streamflow.
 [Preprint in preparation]
 ```
 

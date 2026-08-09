@@ -26,7 +26,7 @@ import torch
 from . import features as F
 from .config import load_config
 from .data import load_arrays
-from .dataset import load_split_indices
+from .masking import mask_forecast_tail, mask_mode
 from .model import build_adjacency_matrix, create_model
 from .windows import WindowSpec, build_date_range, generate_windows
 
@@ -51,8 +51,11 @@ def main() -> int:
     windows = generate_windows(len(date_range), spec)
     seq_len, horizon = spec.seq_length, spec.forecast_horizon
 
-    split = load_split_indices(config.path("split_map"))
-    win_ids = sorted(split["train"] + split["val"])
+    # Export every window in the split map — including "buffer" windows from
+    # blocked-holdout splits. They are excluded from train/val metrics by the
+    # split filter downstream, but held-out-site scoring (eval_hjflp) needs
+    # predictions on those dates too.
+    win_ids = sorted(pd.read_csv(config.path("split_map"))["window_index"].tolist())
 
     graph = pickle.load(open(config.path("graph_out"), "rb"))
     adj = build_adjacency_matrix(graph, node_ids.tolist())
@@ -61,8 +64,16 @@ def main() -> int:
     model = create_model(config, adj, F.INPUT_DIM, device)
     model.load_state_dict(ckpt["model_state_dict"])
     model.eval()
+    forecast_mask = mask_mode(config)
+    ckpt_mask = ckpt.get("forecast_mask", "none")
+    if ckpt_mask != forecast_mask:
+        raise RuntimeError(
+            f"Config forecast_mask={forecast_mask!r} but checkpoint was trained "
+            f"with {ckpt_mask!r} — wrong config/checkpoint pairing."
+        )
     print(f"Loaded checkpoint epoch={ckpt.get('epoch')} val_loss={ckpt.get('val_loss'):.4f}")
-    print(f"Exporting {len(win_ids)} windows x {N} sites x {horizon} horizons")
+    print(f"Exporting {len(win_ids)} windows x {N} sites x {horizon} horizons "
+          f"| forecast_mask={forecast_mask}")
 
     # Per-horizon column buffers.
     buf = {h: {k: [] for k in (
@@ -73,7 +84,8 @@ def main() -> int:
     dates_iso = date_range  # DatetimeIndex
     for wid in win_ids:
         start, end = windows[wid]
-        xt = X_time[start:end]
+        # clone: X_time[start:end] is a view and masking writes in place
+        xt = mask_forecast_tail(X_time[start:end].clone(), seq_len, forecast_mask)
         xs = static_b.expand(xt.shape[0], N, X_static.shape[1])
         X = torch.cat([xt, xs], dim=-1).permute(1, 0, 2)   # (N, wl, 37)
         pred = model(X)                                     # (N, wl, 2)

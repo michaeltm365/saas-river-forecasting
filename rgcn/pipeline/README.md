@@ -108,10 +108,19 @@ rgcn/pipeline/
 ├── model.py         RGCN_v2 (LSTM + graph conv), batched (B,N,T,F) forward
 ├── dataset.py       window dataset + split-index loading
 ├── losses.py        masked RMSE + weighted-BCE multitask loss
+├── masking.py       forecast-tail input masking (honest multi-day horizons)
 ├── train.py         batched training loop, early stopping, checkpointing
 ├── export_predictions.py  per-horizon prediction CSVs
-└── eval_report.py   classification + regression metrics report
+├── eval_report.py   classification + regression metrics report
+└── eval_hjflp.py    held-out-site eval on HJFlp single-visit observations
 ```
+
+Config extensions (see the `config_consist*.yml` variants):
+`masking.forecast_mask: none|obs|obs+drivers` controls forecast-tail input
+masking, and `features.exclude_time: [...]` drops time-varying features for
+ablations (e.g. the no-lag spatial-transfer variant,
+`config_consistph_nolag.yml`). Checkpoints record both; export refuses a
+config/checkpoint mismatch.
 
 Golden rule: released artifacts under `data/huggingface/` are never
 overwritten — every pipeline output uses a new filename under `data/retrain/`.

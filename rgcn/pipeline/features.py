@@ -74,6 +74,32 @@ STATIC_FEATURE_SET = set(STATIC_VARS)
 
 INPUT_DIM = len(FEATURE_VARS)
 
+# Number of time-varying feature columns (the leading block of FEATURE_VARS;
+# X_time's last dim). Statics are appended after these at window assembly.
+N_TIME_FEATURES = INPUT_DIM - len(STATIC_VARS)
+
 
 def feature_index(name: str) -> int:
     return FEATURE_VARS.index(name)
+
+
+def time_feature_selection(exclude: list[str] | None):
+    """Column subset of the time-varying block for feature ablations.
+
+    ``exclude`` names time-varying features to drop (e.g. the 4 obs-lag vars
+    for the no-lag spatial-transfer variant). Returns (keep_indices,
+    effective_feature_vars) where effective_feature_vars is the full ordered
+    input list (kept time features + statics) whose length is the model's
+    input_dim. Static features cannot be excluded here (use a model ablation
+    for that). Raises on unknown or non-time-varying names.
+    """
+    exclude = list(exclude or [])
+    time_vars = FEATURE_VARS[:N_TIME_FEATURES]
+    unknown = [v for v in exclude if v not in time_vars]
+    if unknown:
+        raise ValueError(
+            f"features.exclude_time contains non-time-varying or unknown vars: {unknown}"
+        )
+    keep = [i for i, v in enumerate(time_vars) if v not in exclude]
+    effective = [time_vars[i] for i in keep] + STATIC_VARS
+    return keep, effective

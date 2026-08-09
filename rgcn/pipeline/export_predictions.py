@@ -61,9 +61,6 @@ def main() -> int:
     adj = build_adjacency_matrix(graph, node_ids.tolist())
 
     ckpt = torch.load(config.path("checkpoint"), map_location=device, weights_only=False)
-    model = create_model(config, adj, F.INPUT_DIM, device)
-    model.load_state_dict(ckpt["model_state_dict"])
-    model.eval()
     forecast_mask = mask_mode(config)
     ckpt_mask = ckpt.get("forecast_mask", "none")
     if ckpt_mask != forecast_mask:
@@ -71,9 +68,25 @@ def main() -> int:
             f"Config forecast_mask={forecast_mask!r} but checkpoint was trained "
             f"with {ckpt_mask!r} — wrong config/checkpoint pairing."
         )
+    exclude_time = (config.get("features") or {}).get("exclude_time") or []
+    ckpt_exclude = ckpt.get("exclude_time", [])
+    if sorted(ckpt_exclude) != sorted(exclude_time):
+        raise RuntimeError(
+            f"Config features.exclude_time={exclude_time} but checkpoint was "
+            f"trained with {ckpt_exclude} — wrong config/checkpoint pairing."
+        )
+    keep_time_cols, feature_vars = F.time_feature_selection(exclude_time)
+    input_dim = len(feature_vars)
+    keep_idx = (torch.tensor(keep_time_cols, device=device)
+                if exclude_time else None)
+
+    model = create_model(config, adj, input_dim, device)
+    model.load_state_dict(ckpt["model_state_dict"])
+    model.eval()
     print(f"Loaded checkpoint epoch={ckpt.get('epoch')} val_loss={ckpt.get('val_loss'):.4f}")
     print(f"Exporting {len(win_ids)} windows x {N} sites x {horizon} horizons "
-          f"| forecast_mask={forecast_mask}")
+          f"| forecast_mask={forecast_mask}"
+          + (f" | exclude_time={exclude_time}" if exclude_time else ""))
 
     # Per-horizon column buffers.
     buf = {h: {k: [] for k in (
@@ -86,6 +99,8 @@ def main() -> int:
         start, end = windows[wid]
         # clone: X_time[start:end] is a view and masking writes in place
         xt = mask_forecast_tail(X_time[start:end].clone(), seq_len, forecast_mask)
+        if keep_idx is not None:
+            xt = xt[..., keep_idx]
         xs = static_b.expand(xt.shape[0], N, X_static.shape[1])
         X = torch.cat([xt, xs], dim=-1).permute(1, 0, 2)   # (N, wl, 37)
         pred = model(X)                                     # (N, wl, 2)

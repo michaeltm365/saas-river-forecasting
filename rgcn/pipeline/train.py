@@ -44,12 +44,13 @@ def get_device() -> torch.device:
 
 
 def run_epoch(model, windows, batch_ids, X_time, X_static, y_all, spec, cfg_tr,
-              optimizer=None, forecast_mask="none"):
+              optimizer=None, forecast_mask="none", keep_time_cols=None):
     """One pass over the given window ids. optimizer=None => eval (no grad).
 
-    Windows are stacked into a single batched forward (B, N, wl, 37); the loss
-    is still computed per window then averaged, so gradients match the old
-    per-window loop exactly."""
+    Windows are stacked into a single batched forward (B, N, wl, input_dim);
+    the loss is still computed per window then averaged, so gradients match
+    the old per-window loop exactly. ``keep_time_cols`` optionally subsets the
+    time-varying feature columns (feature-ablation variants, e.g. no-lag)."""
     train_mode = optimizer is not None
     model.train(train_mode)
     horizon = spec.forecast_horizon
@@ -69,7 +70,10 @@ def run_epoch(model, windows, batch_ids, X_time, X_static, y_all, spec, cfg_tr,
             starts = torch.tensor([windows[w][0] for w in chunk], device=device)
             t_idx = starts[:, None] + arange_wl[None, :]     # (B, wl)
             xt = X_time[t_idx]                               # (B, wl, N, 20)
+            # Mask first (fixed column indices), then subset for ablations.
             xt = mask_forecast_tail(xt, spec.seq_length, forecast_mask)
+            if keep_time_cols is not None:
+                xt = xt[..., keep_time_cols]
             xs = X_static[None, None].expand(B, wl, N, X_static.shape[1])
             X = torch.cat([xt, xs], dim=-1).permute(0, 2, 1, 3)  # (B, N, wl, 37)
             pred = model(X)                                  # (B, N, wl, 2)
@@ -139,13 +143,20 @@ def main() -> int:
     epochs = args.epochs or int(config["training"]["epochs"])
     patience = int(config["training"]["early_stopping_patience"])
     forecast_mask = mask_mode(config)
+
+    # Feature ablation (e.g. no-lag variant): subset time-varying columns.
+    exclude_time = (config.get("features") or {}).get("exclude_time") or []
+    keep_time_cols, feature_vars = F.time_feature_selection(exclude_time)
+    input_dim = len(feature_vars)
+    keep_arg = keep_time_cols if exclude_time else None
     print(f"Windows: {len(train_ids)} train / {len(val_ids)} val | epochs={epochs} "
-          f"| forecast_mask={forecast_mask}")
+          f"| forecast_mask={forecast_mask}"
+          + (f" | exclude_time={exclude_time}" if exclude_time else ""))
 
     # Model --------------------------------------------------------------
-    model = create_model(config, adj, F.INPUT_DIM, device)
+    model = create_model(config, adj, input_dim, device)
     n_params = sum(p.numel() for p in model.parameters())
-    print(f"RGCN_v2 input_dim={F.INPUT_DIM} params={n_params:,}")
+    print(f"RGCN_v2 input_dim={input_dim} params={n_params:,}")
     optimizer = torch.optim.Adam(
         model.parameters(), lr=cfg_tr["learning_rate"], weight_decay=cfg_tr["weight_decay"]
     )
@@ -159,9 +170,11 @@ def main() -> int:
         t0 = time.time()
         order = list(rng.permutation(train_ids))
         train_loss = run_epoch(model, windows, order, X_time, X_static, y_all,
-                               spec, cfg_tr, optimizer, forecast_mask=forecast_mask)
+                               spec, cfg_tr, optimizer, forecast_mask=forecast_mask,
+                               keep_time_cols=keep_arg)
         val_loss = run_epoch(model, windows, val_ids, X_time, X_static, y_all,
-                             spec, cfg_tr, optimizer=None, forecast_mask=forecast_mask)
+                             spec, cfg_tr, optimizer=None, forecast_mask=forecast_mask,
+                             keep_time_cols=keep_arg)
         history["train_loss"].append(train_loss)
         history["val_loss"].append(val_loss)
         dt = time.time() - t0
@@ -177,9 +190,10 @@ def main() -> int:
                 "train_loss": train_loss,
                 "config": config.raw,
                 "forecast_mask": forecast_mask,
-                "feature_vars": F.FEATURE_VARS,
+                "feature_vars": feature_vars,
+                "exclude_time": exclude_time,
                 "target_vars": F.TARGET_VARS,
-                "input_dim": F.INPUT_DIM,
+                "input_dim": input_dim,
                 "node_ids": node_ids,
                 "history": history,
             }, ckpt_path)

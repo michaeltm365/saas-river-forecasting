@@ -35,10 +35,40 @@ F1 computed 2026-08-10):
 | Day-3 only (t+3) | 201 | 0.960 | 0.992 | 0.975 | 0.907 | 0.907 |
 
 Note on N: with stride 3, each calendar date is forecast at exactly ONE
-horizon, so the t+3-only slice covers every third date (201 ≈ 613/3). For
-full t+3 coverage of all ~600 site-days, add an eval-only stride-1 export
-(generate all stride-1 windows at export time, keep day-3 outputs; no
-retraining needed) — optional, see "open items".
+horizon, so the t+3-only slice covers every third date (201 ≈ 613/3). The
+stride-1 variant below fixes this for the comparison table.
+
+## RGCN stride-1 eval variant (run this; no retraining)
+
+The stride-3 grid is a training choice (each date in the loss exactly once);
+inference can slide the window daily. To get a true t+3 prediction for ALL
+~600 held-out site-days:
+
+1. Add an eval-stride override to `export_predictions.py` (e.g.
+   `--eval-stride 1` or `windows.eval_stride` in config): generate windows
+   with `WindowSpec(seq_length, forecast_horizon, stride=1)` over the full
+   date range instead of reading window ids from the split map. Everything
+   else (tail masking, feature exclusion, checkpoint guards) unchanged.
+   Write to a separate predictions dir (e.g. `predictions_<tag>_stride1`)
+   so the canonical stride-3 exports stay untouched.
+2. Note the exported window_index then refers to the stride-1 grid, NOT the
+   split map — do not merge it against window_split_map (train/val labels
+   don't apply). For the holdout scoring this doesn't matter: score by
+   (site_id, date) as eval_holdout_sites does; derive the "val-block dates"
+   subset directly from the block date ranges (2020-07-18..29, 09-10..21,
+   10-10..21) rather than from split labels.
+3. Score with `eval_holdout_sites.py` pointed at the stride-1 predictions
+   dir, using ONLY the day-3 (horizon_step=3) rows: every held-out labeled
+   date then has exactly one genuine t+3 prediction (~598 samples,
+   matching LR/XGBoost row counts; also rerun day-1/day-2 slices for a
+   full-coverage multi-horizon table if desired).
+4. Cost: stride-1 triples window count (~14.9k windows) → export takes
+   ~20-25 min on one GPU. Model + checkpoint unchanged
+   (`best_model_consistph_strict_no7_sh.pt`).
+
+RGCN rows for the comparison table then become:
+  - "RGCN (t+3, stride-1 export)": ~598 samples — the headline row.
+  - "RGCN (pooled h=1..3, stride-3)": 613 samples — secondary.
 
 ## Baseline protocol (one script, do NOT edit released notebooks)
 
@@ -61,8 +91,8 @@ Create `benchmarks/site_holdout_baselines.py` that:
    val subset — never on held-out sites).
 5. Score on held-out sites at t+3: Accuracy, ROC-AUC (from probabilities!),
    wet F1, dry F1, dry recall — pooled + per site. Expected N: LR/XGB ~598,
-   LSTM ~448 (30-day history requirement), RGCN Day-3 201 (or ~598 with the
-   stride-1 export).
+   LSTM ~448 (30-day history requirement), RGCN ~598 via the stride-1
+   export variant above (Day-3 stride-3 slice = 201, secondary).
 6. Write `results/site_holdout_comparison.md` with one table: LR, XGB,
    LSTM (HOBO-only), RGCN (strict_no7_sh Day-3 row + pooled row).
 
@@ -81,8 +111,8 @@ Create `benchmarks/site_holdout_baselines.py` that:
 
 ## Open items
 
-- [ ] Optional stride-1 eval-only export for the RGCN so its t+3 slice
-      covers all ~600 site-days instead of every third one.
+- [ ] Implement + run the stride-1 eval export (section above) before
+      building the comparison table.
 - [ ] Optional: LSTM (all sites) variant on the same split.
 - [ ] Multi-seed replicates (3 seeds) of RGCN strict_no7_sh and the LSTM —
       single-seed noise at this val size is ~±0.02 (see f8b587f commit msg).

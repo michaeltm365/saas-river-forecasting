@@ -123,6 +123,18 @@ def main() -> int:
     T, N, _ = X_time.shape
     assert X_time.shape[2] + X_static.shape[1] == F.INPUT_DIM
 
+    # Site holdout (with-sensor regime): held-out reaches stay in the graph and
+    # keep their observation-derived INPUT features, but their labels are
+    # removed from the loss (train and val) — the masked loss skips NaNs. Their
+    # exported predictions are then scored post hoc as spatially-unseen sites.
+    holdout_ids = [int(x) for x in (config.get("site_holdout") or {}).get("nhd_ids", [])]
+    if holdout_ids:
+        idx = [node_ids.index(nid) for nid in holdout_ids]  # raises if unknown
+        n_labels = int((~torch.isnan(y_all[:, idx, :])).sum().item())
+        y_all[:, idx, :] = float("nan")
+        print(f"Site holdout: {len(idx)} reaches removed from loss "
+              f"({n_labels:,} target values masked)")
+
     graph = pickle.load(open(config.path("graph_out"), "rb"))
     assert sorted(graph.nodes()) == node_ids, "node ordering mismatch graph vs arrays"
     adj = build_adjacency_matrix(graph, node_ids)
@@ -192,6 +204,7 @@ def main() -> int:
                 "forecast_mask": forecast_mask,
                 "feature_vars": feature_vars,
                 "exclude_time": exclude_time,
+                "site_holdout": holdout_ids,
                 "target_vars": F.TARGET_VARS,
                 "input_dim": input_dim,
                 "node_ids": node_ids,

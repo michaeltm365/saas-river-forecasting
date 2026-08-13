@@ -29,24 +29,38 @@ from torch.utils.data import DataLoader, TensorDataset
 from xgboost import XGBClassifier
 
 REPO = Path(__file__).resolve().parents[1]
-SEED = 42
+SEED = 42  # overridden by --seed
 SEQ_LEN = 30
 HOLDOUT = [55000900097170, 55000900100137, 55000900099610,
            55000900235848, 55000900271029]
-RGCN_STRIDE1_DIR = REPO / "data/retrain/predictions_consistph_strict_no7_sh_stride1"
 OBS_EXTRA_COLS = ["MaxDepth_cm", "MaxDepth_Threshold", "MaxDepth_Censor"]
 BINARY_COLS = {"MaxDepth_Threshold", "MaxDepth_Censor", "wetdry_status"}
 DROP_COLS = ["NHDPlusID", "SiteIDCode", "Date", "wet_dry_next",
-             "StreamOrde", "FCode", "n_discharge", "n_water_presence", "has_data"]
+             "StreamOrde", "FCode", "n_discharge", "n_water_presence", "has_data",
+             "is_hobo"]
+DRY_THRESHOLD = 0.00014
 
-np.random.seed(SEED)
-torch.manual_seed(SEED)
+
+def rgcn_stride1_dir(seed: int) -> Path:
+    tag = "consistph_strict_no7_sh" + ("" if seed == 42 else f"_s{seed}")
+    return REPO / f"data/retrain/predictions_{tag}_stride1"
 
 
 # --------------------------------------------------------------------------- #
 # Data (mirrors lr.ipynb cells 5-8 / lstm_hobo_sites.ipynb cells 5-6)
 # --------------------------------------------------------------------------- #
+def _aux_tables():
+    drivers = pd.read_parquet(REPO / "data/retrain/met_drivers.parquet")
+    statics = pd.read_csv(REPO / "data/sciencebase/static_vars.csv")
+    degrees = pd.read_parquet(REPO / "data/huggingface/degrees.parquet")
+    order = pd.read_csv(REPO / "data/huggingface/nhd_id_stream_order_permanence.csv")
+    for df in (drivers, statics, degrees, order):
+        df["NHDPlusID"] = df["NHDPlusID"].astype("int64")
+    return drivers, statics, degrees, order
+
+
 def build_central_df() -> pd.DataFrame:
+    """HOBO-only frame (mirrors lr.ipynb cells 5-8 / lstm_hobo_sites cells 5-6)."""
     obs = pd.read_csv(REPO / "data/sciencebase/obs.csv")
     obs["Date"] = pd.to_datetime(obs["Date"])
     hobo = obs[obs["HoboWetDry0.05"].notna()][
@@ -54,14 +68,9 @@ def build_central_df() -> pd.DataFrame:
     ].rename(columns={"HoboWetDry0.05": "wetdry_status"}).copy()
     maxd = obs.loc[obs[OBS_EXTRA_COLS].notna().any(axis=1),
                    ["NHDPlusID", "Date"] + OBS_EXTRA_COLS]
-
-    drivers = pd.read_parquet(REPO / "data/retrain/met_drivers.parquet")
-    statics = pd.read_csv(REPO / "data/sciencebase/static_vars.csv")
-    degrees = pd.read_parquet(REPO / "data/huggingface/degrees.parquet")
-    order = pd.read_csv(REPO / "data/huggingface/nhd_id_stream_order_permanence.csv")
-
-    for df in (hobo, drivers, statics, degrees, order, maxd):
+    for df in (hobo, maxd):
         df["NHDPlusID"] = df["NHDPlusID"].astype("int64")
+    drivers, statics, degrees, order = _aux_tables()
 
     df = hobo.merge(drivers, on=["NHDPlusID", "Date"], how="inner")
     df = df.merge(statics, on="NHDPlusID", how="left")
@@ -76,6 +85,40 @@ def build_central_df() -> pd.DataFrame:
 
     df["wet_dry_next"] = df.groupby("NHDPlusID")["wetdry_status"].shift(-3)
     df = df.dropna(subset=["wet_dry_next"])
+    return df.reset_index(drop=True)
+
+
+def build_central_df_allsites() -> pd.DataFrame:
+    """HOBO + discretized-discharge frame (mirrors lstm_all_sites cells 6-7)."""
+    obs = pd.read_csv(REPO / "data/sciencebase/obs.csv")
+    obs["Date"] = pd.to_datetime(obs["Date"])
+    obs_wide = (obs.drop(columns="SiteIDCode", errors="ignore")
+                   .groupby(["NHDPlusID", "Date"], as_index=False).first())
+    obs_wide["NHDPlusID"] = obs_wide["NHDPlusID"].astype("int64")
+    drivers, statics, degrees, _ = _aux_tables()
+
+    df = obs_wide.merge(drivers, on=["NHDPlusID", "Date"], how="left")
+    df = df.merge(statics, on="NHDPlusID", how="left")
+    df = df.merge(degrees, on="NHDPlusID", how="left")
+
+    df["is_hobo"] = df["HoboWetDry0.05"].notna().astype(int)
+    df["wetdry_discharge"] = (df["Discharge_CMS"] >= DRY_THRESHOLD).astype(int)
+    df["wetdry_status"] = df["HoboWetDry0.05"].fillna(df["wetdry_discharge"])
+    df = df[df["HoboWetDry0.05"].notna() | df["Discharge_CMS"].notna()]
+
+    df = df.sort_values(["NHDPlusID", "Date"])
+    DRIVER_COLS = ["etalfalfa", "etgrass", "prcp", "rhmax", "rhmin", "sph",
+                   "srad", "tmax", "tmin", "vp", "ws"]
+    df[DRIVER_COLS] = (df.groupby("NHDPlusID")[DRIVER_COLS]
+                       .transform(lambda g: g.ffill().bfill()))
+    df[OBS_EXTRA_COLS] = (df.groupby("NHDPlusID")[OBS_EXTRA_COLS]
+                          .transform(lambda g: g.ffill().bfill()))
+    df[OBS_EXTRA_COLS] = df[OBS_EXTRA_COLS].fillna(0)
+
+    df["wet_dry_next"] = df.groupby("NHDPlusID")["wetdry_status"].shift(-3)
+    df = df.dropna(subset=["wet_dry_next"])
+    df = df.drop(columns=["wetdry_discharge", "FromNode", "ToNode", "Flow_Status",
+                          "HoboWetDry0.05", "Discharge_CMS"], errors="ignore")
     return df.reset_index(drop=True)
 
 
@@ -124,8 +167,8 @@ def run_tabular(name, model, tr, te, feats):
 class LSTMModel(nn.Module):
     def __init__(self, input_size, hidden_size=64, num_layers=2, dropout=0.3):
         super().__init__()
-        self.lstm = nn.LSTM(input_size, hidden_size, num_layers,
-                            batch_first=True, dropout=dropout)
+        self.lstm = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True,
+                            dropout=dropout if num_layers > 1 else 0.0)
         self.fc = nn.Linear(hidden_size, 1)
 
     def forward(self, x):
@@ -148,35 +191,40 @@ def make_sequences(df, feats, seq_len=SEQ_LEN):
     return np.array(X, dtype=np.float32), np.array(y), np.array(sites)
 
 
-def run_lstm(train_df, test_df, feats, device):
+def run_lstm(train_df, test_df, feats, device, seed,
+             hidden=64, layers=2, dropout=0.3, lr=1e-4, batch=32, epochs=15):
     tr_scaled, te_scaled = scale_train_only(train_df[feats], test_df[feats], feats)
     train_df = train_df.assign(**{c: tr_scaled[c].values for c in feats})
     test_df = test_df.assign(**{c: te_scaled[c].values for c in feats})
+    # Sites with no driver coverage keep NaN through the left-join; the released
+    # notebook zero-fills AFTER normalization — replicate that here.
+    train_df[feats] = train_df[feats].fillna(0.0)
+    test_df[feats] = test_df[feats].fillna(0.0)
 
     X_tr, y_tr, _ = make_sequences(train_df, feats)
     X_te, y_te, s_te = make_sequences(test_df, feats)
     print(f"  LSTM sequences: {len(X_tr)} train / {len(X_te)} held-out")
 
     n, T, d = X_tr.shape
-    X_res, y_res = ADASYN(random_state=SEED).fit_resample(
+    X_res, y_res = ADASYN(random_state=seed).fit_resample(
         X_tr.reshape(n, T * d), y_tr.astype(int))
-    X_res = X_res.reshape(-1, T, d)
+    X_res = X_res.reshape(-1, T, d).astype(np.float32)
 
-    idx = np.random.default_rng(SEED).permutation(len(X_res))
+    idx = np.random.default_rng(seed).permutation(len(X_res))
     cut = int(0.8 * len(idx))
     tr_i, va_i = idx[:cut], idx[cut:]
     to_t = lambda a: torch.tensor(a, dtype=torch.float32)
     train_loader = DataLoader(TensorDataset(to_t(X_res[tr_i]),
                                             to_t(y_res[tr_i]).reshape(-1, 1)),
-                              batch_size=32, shuffle=True)
+                              batch_size=batch, shuffle=True)
     Xv = to_t(X_res[va_i]).to(device)
     yv = to_t(y_res[va_i]).reshape(-1, 1).to(device)
 
-    model = LSTMModel(input_size=d).to(device)
+    model = LSTMModel(d, hidden, layers, dropout).to(device)
     crit = nn.BCEWithLogitsLoss()
-    opt = torch.optim.Adam(model.parameters(), lr=1e-4)
+    opt = torch.optim.Adam(model.parameters(), lr=lr)
     best, best_state, patience = float("inf"), None, 0
-    for epoch in range(15):
+    for epoch in range(epochs):
         model.train()
         for xb, yb in train_loader:
             opt.zero_grad()
@@ -186,7 +234,7 @@ def run_lstm(train_df, test_df, feats, device):
         model.eval()
         with torch.no_grad():
             vl = crit(model(Xv), yv).item()
-        print(f"  LSTM epoch {epoch+1:2d}/15 val={vl:.4f}")
+        print(f"  LSTM epoch {epoch+1:2d}/{epochs} val={vl:.4f}")
         if vl < best:
             best, best_state, patience = vl, model.state_dict(), 0
         else:
@@ -195,14 +243,18 @@ def run_lstm(train_df, test_df, feats, device):
                 break
     model.load_state_dict(best_state)
     model.eval()
+    probs = []
     with torch.no_grad():
-        prob = torch.sigmoid(model(to_t(X_te).to(device))).cpu().numpy().ravel()
+        for i in range(0, len(X_te), 4096):
+            probs.append(torch.sigmoid(
+                model(to_t(X_te[i:i + 4096]).to(device))).cpu().numpy().ravel())
+    prob = np.concatenate(probs)
     return y_te, prob, (prob >= 0.5).astype(int), s_te
 
 
-def rgcn_rows():
-    """Uniform-metric RGCN rows from the stride-1 t+3 export."""
-    df = pd.read_csv(RGCN_STRIDE1_DIR / "train_val_predictions_day3.csv",
+def rgcn_rows(seed):
+    """Uniform-metric RGCN rows from the (per-seed) stride-1 t+3 export."""
+    df = pd.read_csv(rgcn_stride1_dir(seed) / "train_val_predictions_day3.csv",
                      usecols=["site_id", "date", "has_true_label", "true_wetdry",
                               "pred_wetdry_prob"], parse_dates=["date"])
     df = df[df["has_true_label"] & df["site_id"].isin(HOLDOUT)]
@@ -214,10 +266,15 @@ def rgcn_rows():
     return df, y, prob, (prob >= 0.5).astype(int)
 
 
-# --------------------------------------------------------------------------- #
-def main() -> int:
+def run_seed(seed: int, with_rgcn: bool):
+    """Train + score every baseline for one seed; return (results, per_site)."""
+    global SEED
+    SEED = seed
+    np.random.seed(seed)
+    torch.manual_seed(seed)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    print(f"Device: {device}")
+    print(f"Device: {device} | seed={seed}")
+
     df = build_central_df()
     train_df = df[~df["NHDPlusID"].isin(HOLDOUT)].copy()
     test_df = df[df["NHDPlusID"].isin(HOLDOUT)].copy()
@@ -226,49 +283,104 @@ def main() -> int:
           f"holdout sites {test_df['NHDPlusID'].nunique()} ({len(test_df)} rows)")
 
     X_all, feats = feature_frame(df)
-    print(f"features ({len(feats)}): {feats}")
     tr = (X_all.loc[train_df.index], train_df["wet_dry_next"])
     te = (X_all.loc[test_df.index], test_df["wet_dry_next"])
 
-    results = {}
-    per_site = {}
+    results, per_site = {}, {}
+
+    def record(name, y, prob, pred, sites):
+        results[name] = metrics(y, prob, pred)
+        per_site[name] = {sid: metrics(y[sites == sid], prob[sites == sid],
+                                       pred[sites == sid]) for sid in HOLDOUT}
 
     for name, model in [
-        ("Logistic Regression", LogisticRegression(max_iter=3000, random_state=SEED)),
+        ("Logistic Regression", LogisticRegression(max_iter=3000, random_state=seed)),
         ("XGBoost", XGBClassifier(max_depth=3, learning_rate=0.1, n_estimators=100,
-                                  random_state=SEED, eval_metric="logloss")),
+                                  random_state=seed, eval_metric="logloss")),
     ]:
         print(f"\n=== {name} ===")
         prob, pred = run_tabular(name, model, tr, te, feats)
-        y = te[1].astype(int).to_numpy()
-        results[name] = metrics(y, prob, pred)
-        per_site[name] = {
-            sid: metrics(y[test_df["NHDPlusID"].values == sid],
-                         prob[test_df["NHDPlusID"].values == sid],
-                         pred[test_df["NHDPlusID"].values == sid])
-            for sid in HOLDOUT}
+        record(name, te[1].astype(int).to_numpy(), prob, pred,
+               test_df["NHDPlusID"].values)
 
     print("\n=== LSTM (HOBO only) ===")
-    y_l, prob_l, pred_l, sites_l = run_lstm(
-        pd.concat([train_df, X_all.loc[train_df.index].drop(
-            columns=[c for c in X_all.columns if c in train_df.columns])], axis=1),
-        pd.concat([test_df, X_all.loc[test_df.index].drop(
-            columns=[c for c in X_all.columns if c in test_df.columns])], axis=1),
-        feats, device)
-    results["LSTM (HOBO only)"] = metrics(y_l, prob_l, pred_l)
-    per_site["LSTM (HOBO only)"] = {
-        sid: metrics(y_l[sites_l == sid], prob_l[sites_l == sid],
-                     pred_l[sites_l == sid])
-        for sid in HOLDOUT}
+    aug = lambda base: pd.concat(
+        [base, X_all.loc[base.index].drop(
+            columns=[c for c in X_all.columns if c in base.columns])], axis=1)
+    y_l, prob_l, pred_l, sites_l = run_lstm(aug(train_df), aug(test_df),
+                                            feats, device, seed)
+    record("LSTM (HOBO only)", y_l, prob_l, pred_l, sites_l)
 
-    print("\n=== RGCN (strict_no7_sh, stride-1 t+3) ===")
-    rdf, y_r, prob_r, pred_r = rgcn_rows()
-    results["RGCN (strict, with-sensor holdout)"] = metrics(y_r, prob_r, pred_r)
-    per_site["RGCN (strict, with-sensor holdout)"] = {
-        sid: metrics(y_r[rdf["site_id"].values == sid],
-                     prob_r[rdf["site_id"].values == sid],
-                     pred_r[rdf["site_id"].values == sid])
-        for sid in HOLDOUT}
+    print("\n=== LSTM (all sites) ===")
+    dfa = build_central_df_allsites()
+    tra = dfa[~dfa["NHDPlusID"].isin(HOLDOUT)].copy()
+    tea = dfa[dfa["NHDPlusID"].isin(HOLDOUT)].copy()
+    Xa, feats_a = feature_frame(dfa)
+    print(f"all-sites: {len(dfa)} rows | train {len(tra)} | holdout {len(tea)}")
+    aug_a = lambda base: pd.concat(
+        [base, Xa.loc[base.index].drop(
+            columns=[c for c in Xa.columns if c in base.columns])], axis=1)
+    # Optuna-selected released hyperparameters (lstm_all_sites.ipynb)
+    y_a, prob_a, pred_a, sites_a = run_lstm(aug_a(tra), aug_a(tea), feats_a, device,
+                                            seed, hidden=57, layers=2, dropout=0.15,
+                                            lr=0.008, batch=64)
+    record("LSTM (all sites)", y_a, prob_a, pred_a, sites_a)
+
+    if with_rgcn:
+        print("\n=== RGCN (strict_no7_sh, stride-1 t+3) ===")
+        rdf, y_r, prob_r, pred_r = rgcn_rows(seed)
+        record("RGCN (strict, with-sensor holdout)", y_r, prob_r, pred_r,
+               rdf["site_id"].values)
+
+    return results, per_site
+
+
+# --------------------------------------------------------------------------- #
+def main() -> int:
+    import argparse
+    import json
+
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--seed", type=int, default=42)
+    ap.add_argument("--no-rgcn", action="store_true",
+                    help="Skip RGCN rows (e.g. its per-seed export not ready yet).")
+    ap.add_argument("--aggregate", default=None,
+                    help="Comma-separated seeds: read their JSONs and write the "
+                         "multi-seed mean±std table instead of training.")
+    args = ap.parse_args()
+
+    out_json = REPO / "results" / "site_holdout_seeds"
+    out_json.mkdir(parents=True, exist_ok=True)
+
+    if args.aggregate:
+        seeds = [int(s) for s in args.aggregate.split(",")]
+        runs = [json.loads((out_json / f"seed{s}.json").read_text()) for s in seeds]
+        models = list(runs[0]["results"].keys())
+        lines = ["# Site-holdout comparison — multi-seed (mean ± std)", ""]
+        lines.append(f"Seeds: {seeds}. Same split/protocol as "
+                     "results/site_holdout_comparison.md.")
+        lines.append("")
+        lines.append("| Model | N | Accuracy | ROC-AUC | Wet F1 | Dry F1 | Dry recall |")
+        lines.append("|---|--:|--:|--:|--:|--:|--:|")
+        for m in models:
+            vals = {k: [r["results"][m][k] for r in runs if m in r["results"]]
+                    for k in ("N", "Accuracy", "ROC-AUC", "WetF1", "DryF1", "DryRecall")}
+            def ms(k):
+                a = np.array(vals[k], dtype=float)
+                return f"{a.mean():.3f} ± {a.std():.3f}"
+            lines.append(f"| {m} | {int(np.mean(vals['N']))} | {ms('Accuracy')} | "
+                         f"{ms('ROC-AUC')} | {ms('WetF1')} | {ms('DryF1')} | "
+                         f"{ms('DryRecall')} |")
+        out = REPO / "results/site_holdout_comparison_multiseed.md"
+        out.write_text("\n".join(lines))
+        print("\n".join(lines))
+        print(f"\nWrote {out}")
+        return 0
+
+    results, per_site = run_seed(args.seed, with_rgcn=not args.no_rgcn)
+    (out_json / f"seed{args.seed}.json").write_text(json.dumps(
+        {"seed": args.seed, "results": results, "per_site": per_site}, indent=1))
+    print(f"\nWrote {out_json / f'seed{args.seed}.json'}")
 
     # ---- report ----
     lines = ["# Site-holdout comparison — all models, same 5 held-out reaches", ""]
@@ -309,7 +421,8 @@ def main() -> int:
                  "(30-day history requirement). RGCN N counts (site, date) pairs "
                  "with a t+3 prediction from the stride-1 export.")
 
-    out = REPO / "results/site_holdout_comparison.md"
+    suffix = "" if args.seed == 42 else f"_s{args.seed}"
+    out = REPO / f"results/site_holdout_comparison{suffix}.md"
     out.write_text("\n".join(lines))
     print("\n" + "\n".join(lines))
     print(f"\nWrote {out}")

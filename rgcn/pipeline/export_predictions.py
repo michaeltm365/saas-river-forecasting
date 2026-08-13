@@ -33,6 +33,19 @@ from .windows import WindowSpec, build_date_range, generate_windows
 
 @torch.no_grad()
 def main() -> int:
+    import argparse
+
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--eval-stride", type=int, default=None,
+                    help="Regenerate windows at this stride for inference only "
+                         "(e.g. 1 for daily t+3 coverage). Writes to "
+                         "<predictions_dir>_stride<N>; window_index then refers "
+                         "to the eval grid, NOT the split map.")
+    ap.add_argument("--day3-range", default=None, metavar="START:END",
+                    help="With --eval-stride: only export windows whose day-3 "
+                         "date falls in this range (e.g. 2020-06-01:2020-11-15).")
+    args = ap.parse_args()
+
     config = load_config()
     if not torch.cuda.is_available():
         raise RuntimeError("CUDA not available (launch with CUDA_VISIBLE_DEVICES=...).")
@@ -48,14 +61,23 @@ def main() -> int:
 
     date_range = build_date_range(config)
     spec = WindowSpec.from_config(config)
+    if args.eval_stride:
+        spec = WindowSpec(spec.seq_length, spec.forecast_horizon, args.eval_stride)
     windows = generate_windows(len(date_range), spec)
     seq_len, horizon = spec.seq_length, spec.forecast_horizon
 
-    # Export every window in the split map — including "buffer" windows from
-    # blocked-holdout splits. They are excluded from train/val metrics by the
-    # split filter downstream, but held-out-site scoring (eval_hjflp) needs
-    # predictions on those dates too.
-    win_ids = sorted(pd.read_csv(config.path("split_map"))["window_index"].tolist())
+    if args.eval_stride:
+        win_ids = list(range(len(windows)))
+        if args.day3_range:
+            lo, hi = (pd.Timestamp(x) for x in args.day3_range.split(":"))
+            win_ids = [w for w in win_ids
+                       if lo <= date_range[windows[w][1] - 1] <= hi]
+    else:
+        # Export every window in the split map — including "buffer" windows from
+        # blocked-holdout splits. They are excluded from train/val metrics by the
+        # split filter downstream, but held-out-site scoring (eval_hjflp) needs
+        # predictions on those dates too.
+        win_ids = sorted(pd.read_csv(config.path("split_map"))["window_index"].tolist())
 
     graph = pickle.load(open(config.path("graph_out"), "rb"))
     adj = build_adjacency_matrix(graph, node_ids.tolist())
@@ -120,6 +142,8 @@ def main() -> int:
             b["pred_discharge"].append(np.expm1(pred[t_local, :, F.DISCHARGE_IDX]))
 
     out_dir = config.path("predictions_dir")
+    if args.eval_stride:
+        out_dir = out_dir.with_name(out_dir.name + f"_stride{args.eval_stride}")
     out_dir.mkdir(parents=True, exist_ok=True)
     for h in range(1, horizon + 1):
         b = buf[h]

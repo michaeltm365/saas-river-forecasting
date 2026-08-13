@@ -37,23 +37,51 @@ def _metrics(s: pd.DataFrame) -> dict:
 
 
 def main() -> int:
+    import argparse
+
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--predictions-dir", default=None,
+                    help="Override paths.predictions_dir (e.g. a _stride1 export).")
+    ap.add_argument("--horizons", default="1,2,3",
+                    help="Comma-separated horizon steps to score (e.g. '3' for a "
+                         "t+3-only comparison against single-horizon baselines).")
+    args = ap.parse_args()
+
     config = load_config()
     holdout = [int(x) for x in (config.get("site_holdout") or {}).get("nhd_ids", [])]
     if not holdout:
         raise SystemExit("Config has no site_holdout.nhd_ids — nothing to score.")
-    pred_dir = config.path("predictions_dir")
-    split = pd.read_csv(config.path("split_map"))[["window_index", "split"]]
+    pred_dir = (config.repo_root / args.predictions_dir if args.predictions_dir
+                else config.path("predictions_dir"))
+    horizons = [int(x) for x in args.horizons.split(",")]
+
+    # Val-block membership by DATE (not split-map window ids, which don't apply
+    # to eval-stride exports): a prediction date is "val" if it falls inside a
+    # holdout block of the blocked split.
+    blocks = [(pd.Timestamp(s), pd.Timestamp(e))
+              for s, e in config["split"].get("holdout_blocks", [])]
 
     frames = []
-    for h in (1, 2, 3):
+    for h in horizons:
         df = pd.read_csv(pred_dir / f"train_val_predictions_day{h}.csv",
-                         usecols=["window_index", "site_id", "date", "has_true_label",
-                                  "true_wetdry", "pred_wetdry_prob", "pred_wetdry_label"])
+                         usecols=["site_id", "date", "has_true_label",
+                                  "true_wetdry", "pred_wetdry_prob", "pred_wetdry_label"],
+                         parse_dates=["date"])
         df = df[df["has_true_label"] & df["site_id"].isin(holdout)]
-        df = df.merge(split, on="window_index", how="left")
+        # Eval-stride grids can predict the same (site, date) from several
+        # windows at the same horizon; average the probability.
+        df = (df.groupby(["site_id", "date"], as_index=False)
+                .agg(true_wetdry=("true_wetdry", "first"),
+                     pred_wetdry_prob=("pred_wetdry_prob", "mean")))
+        df["pred_wetdry_label"] = (df["pred_wetdry_prob"] >= 0.5).astype(int)
         df["horizon"] = f"Day {h}"
         frames.append(df)
     all_h = pd.concat(frames, ignore_index=True)
+    in_block = pd.Series(False, index=all_h.index)
+    for s, e in blocks:
+        in_block |= (all_h["date"] >= s) & (all_h["date"] <= e)
+    all_h["split"] = "other"
+    all_h.loc[in_block, "split"] = "val"
 
     lines = ["# RGCN with-sensor site-holdout evaluation", ""]
     lines.append(f"Checkpoint: `{config['paths']['checkpoint']}` | "
@@ -70,8 +98,7 @@ def main() -> int:
         lines.append("| Slice | N | Wet frac | Accuracy | ROC-AUC | F1 | Dry recall |")
         lines.append("|---|--:|--:|--:|--:|--:|--:|")
         rows = [("Pooled (all horizons)", scope)]
-        rows += [(hname, scope[scope["horizon"] == hname])
-                 for hname in ("Day 1", "Day 2", "Day 3")]
+        rows += [(f"Day {h}", scope[scope["horizon"] == f"Day {h}"]) for h in horizons]
         rows += [(f"site {sid}", scope[scope["site_id"] == sid]) for sid in holdout]
         for name, s in rows:
             if len(s) == 0:
@@ -87,8 +114,13 @@ def main() -> int:
                  "new site). 'Val-block dates' additionally avoids any temporal "
                  "overlap with training targets.")
 
+    tag = config.path("checkpoint").stem.replace("best_model_", "")
+    if args.predictions_dir and "_stride" in args.predictions_dir:
+        tag += "_" + args.predictions_dir.rsplit("_", 1)[-1].rstrip("/")
+    if horizons != [1, 2, 3]:
+        tag += "_h" + "".join(map(str, horizons))
     out = config.repo_root / config["paths"].get(
-        "holdout_report", f"results/rgcn_eval_siteholdout_{config.path('checkpoint').stem.replace('best_model_', '')}.md")
+        "holdout_report", f"results/rgcn_eval_siteholdout_{tag}.md")
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text("\n".join(lines))
     print("\n".join(lines))

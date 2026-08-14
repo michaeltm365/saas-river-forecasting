@@ -2,6 +2,7 @@ CLAUDE.md
 data/
 .venv/
 __pycache__/
+.DS_Store
 
 # Baseline archive: keep the manifest in git; binary snapshots live on HF/ScienceBase
 results/as_released_2026-06/*
@@ -11,3 +12,5 @@ results/as_released_2026-06/*
 # paper (must never be published). Only the retrain plan is tracked.
 context/*
 !context/RGCN_RETRAIN_PLAN.md
+
+docs/

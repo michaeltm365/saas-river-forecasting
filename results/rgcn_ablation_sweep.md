@@ -21,3 +21,13 @@ Phases split (784 val wet/dry labels), consistph protocol (30-day window, obs-ma
 | weight_decay 1e-3 | 31 | 0.210 | 0.929 | 0.953 | 0.957 | 0.845 | 0.907 | 0.939 | 0.928 |
 
 Notes: 'wet/dry-only' trains with no discharge loss (its NSE columns test whether the untrained regression head still tracks flow); 'discharge-only' vice versa (its classification columns are expected to be near-chance). fpw = dry-class BCE up-weight.
+## Replication check (pre-registered rule: any row beyond ±0.02 gets seeds 43/44)
+
+dropout 0.3 was the only row outside the band. Across seeds 42/43/44 it scores
+Acc 0.967 / 0.946 / 0.957 (0.957 ± 0.009) vs the default's 0.945 ± 0.002, with
+dry recall 0.930 / 0.860 / 0.876 and NSE d3 0.806 / 0.902 / 0.928. The seed-42
+result was partly a favorable draw: the mean advantage (~+1.2 pts) is
+comparable to its own seed spread and the apparent discharge penalty does not
+replicate. Conclusion: heavier dropout is mildly favorable-to-neutral for
+classification but not a defensible winner; the default configuration is
+retained. (Checkpoints: data/retrain/ablations/abl_do03*.pt.)

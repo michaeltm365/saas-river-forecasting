@@ -12,3 +12,4 @@ results/as_released_2026-06/*
 context/*
 !context/RGCN_RETRAIN_PLAN.md
 !context/SITE_HOLDOUT_BASELINES_PLAN.md
+!context/RGCN_RETRAIN_TRAJECTORY.md

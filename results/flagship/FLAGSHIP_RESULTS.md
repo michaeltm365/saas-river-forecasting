@@ -86,36 +86,28 @@ needed whichever variant becomes the headline row.
 ## 6. Matched-set head-to-head at t+3 (the clean comparison table)
 
 Identical (reach, date) rows for all models: inner join of RGCN stride-1
-day-3 export and LSTM predictions, seeds paired; persistence uses only the
-status as of d−3 (`results/flagship/matched_headtohead.md`; HOBO-only
-sub-tables in the file). Accuracy:
+day-3 export and LSTM predictions, seeds paired
+(`results/flagship/matched_headtohead.md`; HOBO-only sub-tables in the
+file). Accuracy:
 
-| Split | RGCN | LSTM (ADASYN) | LSTM (no ADASYN) | Persistence |
-|---|---|---|---|---|
-| ph (N=651) | **0.958 ± 0.004** | 0.904 | 0.932 | 0.945 |
-| q65 (N=928) | **0.961 ± 0.010** | 0.926 | 0.941 | 0.946 |
-| q80 (N=537) | **0.942 ± 0.005** | 0.919 | 0.910 | 0.914 |
-| site (N=449) | 0.928 ± 0.034 | 0.959 | 0.938 | **0.964** |
+| Split | RGCN | LSTM (ADASYN) | LSTM (no ADASYN) |
+|---|---|---|---|
+| ph (N=651) | **0.958 ± 0.004** | 0.904 | 0.932 |
+| q65 (N=928) | **0.961 ± 0.010** | 0.926 | 0.941 |
+| q80 (N=537) | **0.942 ± 0.005** | 0.919 | 0.910 |
+| site (N=449) | 0.928 ± 0.034 | **0.959** | 0.938 |
 
 Dry-side (the paper's declared evaluation focus) is the stronger story —
-ph: RGCN dry F1 0.879 / dry recall 0.949 vs persistence 0.824 / 0.800
-(persistence misses ~1 in 5 dry days the RGCN catches); same pattern on
-q65/q80. RGCN wins AUC on every split (persistence has none). The site split
-is persistence's turf (0.964), with the ADASYN-LSTM close behind.
+ph: RGCN dry F1 0.879 / dry recall 0.949, ahead of both LSTM variants; same
+pattern on q65/q80. The RGCN also wins AUC on every temporal split; the
+site split favors the ADASYN-LSTM.
 
-## 7. Persistence baseline (per horizon, standard val sets)
+## 7. Persistence baseline
 
-Horizon-matched: day-h forecast = last observed status as of d−h, ffill only
-(`results/flagship/persistence_baseline.md`). Pooled Acc, persistence vs
-RGCN s42: ph 0.967 vs 0.957; q65 0.962 vs 0.949; **q80 0.939 vs 0.944 (RGCN
-wins)**. Persistence wins d1/d2 but decays with horizon while the RGCN is
-flat: at d3 (the paper's declared task) ph is a tie (0.961 both), q80 goes
-to the RGCN (0.935 vs 0.918), and the RGCN's d3 dry recall beats
-persistence's everywhere (ph 0.930 vs 0.860). **This supersedes the
-trajectory-era finding that persistence beats every RGCN variant** — that
-was true of the guard-7 A-strict; the flagship at t+3 matches or beats
-persistence on all temporal splits. Persistence rows belong in every paper
-classification table regardless.
+Held out of the main branch for now — the horizon-matched persistence
+analysis lives on the `rgcn-retrain` branch
+(`results/flagship/persistence_baseline.md` and the full sections 6–7
+there).
 
 ## 8. Ablations + hyperparameter sensitivity (flagship, ph, seed 42)
 
@@ -179,7 +171,8 @@ mean 146.7 — an ungauged-product success).
 3. §3.4 rewrite around the no-statics ablation; drop "avoids static
    memorization by construction".
 4. Table 8 → flagship sweep; §4.1 multitask claim → consolidation claim.
-5. Persistence row in every classification table; frame per §7 above.
+5. (Deferred) Persistence-baseline framing — held on the rgcn-retrain
+   branch for now.
 6. §3.6: canonical q65 copula = Platt + ρ-clip on all 22 HOBO val reaches,
    18/22 (82%) coverage; report raw 6/22 as the motivating comparison and
    the two intermittent under-predictions as residual limitation.

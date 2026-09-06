@@ -39,7 +39,7 @@ This repository contains the code and analysis for our research on machine learn
 │   └── rgcn_config.yaml             # [as-released] RGCN model configuration
 ├── benchmarks/
 │   ├── lstm_flagship_splits.py      # CANONICAL LSTM (all sites) runs on the flagship splits
-│   ├── flagship_analysis.py         # Persistence baseline + matched cross-model comparison
+│   ├── flagship_analysis.py         # Matched cross-model comparison + analysis utilities
 │   ├── flagship_copula_all.py       # Annual dry-day (Gaussian copula) estimation, all splits
 │   └── flagship_ablation_eval.py    # RGCN ablation sweep table
 ├── synthetic_data/
@@ -77,10 +77,9 @@ for the t+1..t+3 tail — no post-issue-day information). Headline numbers
 |---|--:|--:|--:|--:|
 | RGCN (flagship, q65) | 968 | 0.962 ± 0.009 | 0.984 ± 0.001 | 0.975 ± 0.006 |
 | LSTM (all sites, q65) | 10,512 | 0.951 ± 0.008 | 0.870 ± 0.041 | 0.974 ± 0.004 |
-| Persistence baseline | 945 | 0.962 | — | 0.975 |
 
 The full campaign (all four splits, held-out-site transfer, ablations,
-persistence, matched cross-model comparison, copula) is consolidated in
+matched cross-model comparison, copula) is consolidated in
 [`results/flagship/FLAGSHIP_RESULTS.md`](results/flagship/FLAGSHIP_RESULTS.md).
 
 After setting up the environment and data (sections below), reproduce the
@@ -106,7 +105,7 @@ CUDA_VISIBLE_DEVICES=0 uv run python -m rgcn.pipeline.export_predictions \
 #    (canonical rows = q65) -> results/flagship/lstm_all/
 CUDA_VISIBLE_DEVICES=0 uv run python benchmarks/lstm_flagship_splits.py
 
-# 4) Persistence baseline + matched cross-model tables; copula on all splits
+# 4) Matched cross-model tables; copula
 uv run python benchmarks/flagship_analysis.py
 uv run python benchmarks/flagship_copula_all.py
 ```

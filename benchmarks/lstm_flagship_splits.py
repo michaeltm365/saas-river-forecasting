@@ -36,26 +36,17 @@ from torch.utils.data import DataLoader, TensorDataset
 
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "benchmarks"))
-from site_holdout_baselines import (  # noqa: E402
-    HOLDOUT, SEQ_LEN, LSTMModel, build_central_df_allsites, feature_frame,
-    metrics, scale_train_only)
+from hja.data import (build_allsites_frame as build_central_df_allsites,  # noqa: E402
+                      feature_frame, scale_train_only)
+from hja.evaluation import metrics  # noqa: E402
+from hja.models.lstm import SEQ_LEN, LSTMModel  # noqa: E402
+from hja.splits import BLOCKS, CUTOFFS, GUARD_DAYS, in_blocks  # noqa: E402,F401
+from site_holdout_baselines import HOLDOUT  # noqa: E402
 
 OUT = REPO / "results/flagship/lstm_all"
 SEEDS = (42, 43, 44)
-GUARD_DAYS = 3
-BLOCKS = [("2020-07-18", "2020-07-29"), ("2020-09-10", "2020-09-21"),
-          ("2020-10-10", "2020-10-21")]
-CUTOFFS = {"q65": "2020-09-10", "q80": "2020-09-28"}
 # Optuna-selected released hyperparameters (lstm_all_sites.ipynb)
 HP = dict(hidden=57, layers=2, dropout=0.15, lr=0.008, batch=64, epochs=15)
-
-
-def in_blocks(dates: pd.Series, pad_days: int = 0) -> pd.Series:
-    pad = pd.Timedelta(days=pad_days)
-    mask = pd.Series(False, index=dates.index)
-    for s, e in BLOCKS:
-        mask |= (dates >= pd.Timestamp(s) - pad) & (dates <= pd.Timestamp(e) + pad)
-    return mask
 
 
 def make_sequences_dated(df: pd.DataFrame, feats: list[str]):

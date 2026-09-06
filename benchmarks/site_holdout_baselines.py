@@ -29,127 +29,24 @@ from torch.utils.data import DataLoader, TensorDataset
 from xgboost import XGBClassifier
 
 REPO = Path(__file__).resolve().parents[1]
+from hja.data import (BINARY_COLS, DROP_COLS, DRY_THRESHOLD,  # noqa: F401
+                      OBS_EXTRA_COLS, build_allsites_frame, build_hobo_frame,
+                      feature_frame, scale_train_only)
+from hja.evaluation import metrics  # noqa: F401
+from hja.models.lstm import SEQ_LEN, LSTMModel, make_sequences  # noqa: F401
+
 SEED = 42  # overridden by --seed
-SEQ_LEN = 30
 HOLDOUT = [55000900097170, 55000900100137, 55000900099610,
            55000900235848, 55000900271029]
-OBS_EXTRA_COLS = ["MaxDepth_cm", "MaxDepth_Threshold", "MaxDepth_Censor"]
-BINARY_COLS = {"MaxDepth_Threshold", "MaxDepth_Censor", "wetdry_status"}
-DROP_COLS = ["NHDPlusID", "SiteIDCode", "Date", "wet_dry_next",
-             "StreamOrde", "FCode", "n_discharge", "n_water_presence", "has_data",
-             "is_hobo"]
-DRY_THRESHOLD = 0.00014
+
+# Back-compat aliases (this module's original names; logic now lives in hja.data)
+build_central_df = build_hobo_frame
+build_central_df_allsites = build_allsites_frame
 
 
 def rgcn_stride1_dir(seed: int) -> Path:
     tag = "consistph_strict_no7_sh" + ("" if seed == 42 else f"_s{seed}")
     return REPO / f"data/retrain/predictions_{tag}_stride1"
-
-
-# --------------------------------------------------------------------------- #
-# Data (mirrors lr.ipynb cells 5-8 / lstm_hobo_sites.ipynb cells 5-6)
-# --------------------------------------------------------------------------- #
-def _aux_tables():
-    drivers = pd.read_parquet(REPO / "data/retrain/met_drivers.parquet")
-    statics = pd.read_csv(REPO / "data/sciencebase/static_vars.csv")
-    degrees = pd.read_parquet(REPO / "data/huggingface/degrees.parquet")
-    order = pd.read_csv(REPO / "data/huggingface/nhd_id_stream_order_permanence.csv")
-    for df in (drivers, statics, degrees, order):
-        df["NHDPlusID"] = df["NHDPlusID"].astype("int64")
-    return drivers, statics, degrees, order
-
-
-def build_central_df() -> pd.DataFrame:
-    """HOBO-only frame (mirrors lr.ipynb cells 5-8 / lstm_hobo_sites cells 5-6)."""
-    obs = pd.read_csv(REPO / "data/sciencebase/obs.csv")
-    obs["Date"] = pd.to_datetime(obs["Date"])
-    hobo = obs[obs["HoboWetDry0.05"].notna()][
-        ["NHDPlusID", "SiteIDCode", "Date", "HoboWetDry0.05"]
-    ].rename(columns={"HoboWetDry0.05": "wetdry_status"}).copy()
-    maxd = obs.loc[obs[OBS_EXTRA_COLS].notna().any(axis=1),
-                   ["NHDPlusID", "Date"] + OBS_EXTRA_COLS]
-    for df in (hobo, maxd):
-        df["NHDPlusID"] = df["NHDPlusID"].astype("int64")
-    drivers, statics, degrees, order = _aux_tables()
-
-    df = hobo.merge(drivers, on=["NHDPlusID", "Date"], how="inner")
-    df = df.merge(statics, on="NHDPlusID", how="left")
-    df = df.merge(degrees, on="NHDPlusID", how="left")
-    df = df.merge(order, on="NHDPlusID", how="left")
-    df = df.merge(maxd, on=["NHDPlusID", "Date"], how="left")
-
-    df = df.sort_values(["NHDPlusID", "Date"])
-    df[OBS_EXTRA_COLS] = (df.groupby("NHDPlusID")[OBS_EXTRA_COLS]
-                          .transform(lambda g: g.ffill().bfill()))
-    df[OBS_EXTRA_COLS] = df[OBS_EXTRA_COLS].fillna(0)
-
-    df["wet_dry_next"] = df.groupby("NHDPlusID")["wetdry_status"].shift(-3)
-    df = df.dropna(subset=["wet_dry_next"])
-    return df.reset_index(drop=True)
-
-
-def build_central_df_allsites() -> pd.DataFrame:
-    """HOBO + discretized-discharge frame (mirrors lstm_all_sites cells 6-7)."""
-    obs = pd.read_csv(REPO / "data/sciencebase/obs.csv")
-    obs["Date"] = pd.to_datetime(obs["Date"])
-    obs_wide = (obs.drop(columns="SiteIDCode", errors="ignore")
-                   .groupby(["NHDPlusID", "Date"], as_index=False).first())
-    obs_wide["NHDPlusID"] = obs_wide["NHDPlusID"].astype("int64")
-    drivers, statics, degrees, _ = _aux_tables()
-
-    df = obs_wide.merge(drivers, on=["NHDPlusID", "Date"], how="left")
-    df = df.merge(statics, on="NHDPlusID", how="left")
-    df = df.merge(degrees, on="NHDPlusID", how="left")
-
-    df["is_hobo"] = df["HoboWetDry0.05"].notna().astype(int)
-    df["wetdry_discharge"] = (df["Discharge_CMS"] >= DRY_THRESHOLD).astype(int)
-    df["wetdry_status"] = df["HoboWetDry0.05"].fillna(df["wetdry_discharge"])
-    df = df[df["HoboWetDry0.05"].notna() | df["Discharge_CMS"].notna()]
-
-    df = df.sort_values(["NHDPlusID", "Date"])
-    DRIVER_COLS = ["etalfalfa", "etgrass", "prcp", "rhmax", "rhmin", "sph",
-                   "srad", "tmax", "tmin", "vp", "ws"]
-    df[DRIVER_COLS] = (df.groupby("NHDPlusID")[DRIVER_COLS]
-                       .transform(lambda g: g.ffill().bfill()))
-    df[OBS_EXTRA_COLS] = (df.groupby("NHDPlusID")[OBS_EXTRA_COLS]
-                          .transform(lambda g: g.ffill().bfill()))
-    df[OBS_EXTRA_COLS] = df[OBS_EXTRA_COLS].fillna(0)
-
-    df["wet_dry_next"] = df.groupby("NHDPlusID")["wetdry_status"].shift(-3)
-    df = df.dropna(subset=["wet_dry_next"])
-    df = df.drop(columns=["wetdry_discharge", "FromNode", "ToNode", "Flow_Status",
-                          "HoboWetDry0.05", "Discharge_CMS"], errors="ignore")
-    return df.reset_index(drop=True)
-
-
-def feature_frame(df: pd.DataFrame):
-    feats = [c for c in df.select_dtypes(include=[np.number]).columns
-             if c not in DROP_COLS]
-    X = df[feats].copy().ffill().bfill().fillna(0)
-    return X, feats
-
-
-def scale_train_only(X_tr, X_te, feats):
-    cont = [c for c in feats if c not in BINARY_COLS]
-    scaler = StandardScaler().fit(X_tr[cont])
-    X_tr, X_te = X_tr.copy(), X_te.copy()
-    X_tr[cont] = scaler.transform(X_tr[cont])
-    X_te[cont] = scaler.transform(X_te[cont])
-    return X_tr, X_te
-
-
-def metrics(y, prob, pred):
-    y = np.asarray(y).astype(int)
-    return {
-        "N": len(y),
-        "WetFrac": float(y.mean()),
-        "Accuracy": accuracy_score(y, pred),
-        "ROC-AUC": roc_auc_score(y, prob) if len(np.unique(y)) > 1 else float("nan"),
-        "WetF1": f1_score(y, pred, pos_label=1, zero_division=0),
-        "DryF1": f1_score(y, pred, pos_label=0, zero_division=0),
-        "DryRecall": (float(((y == 0) & (pred == 0)).sum() / max((y == 0).sum(), 1))
-                      if (y == 0).any() else float("nan")),
-    }
 
 
 # --------------------------------------------------------------------------- #
@@ -162,33 +59,6 @@ def run_tabular(name, model, tr, te, feats):
     prob = model.predict_proba(X_te)[:, 1]
     pred = (prob >= 0.5).astype(int)
     return prob, pred
-
-
-class LSTMModel(nn.Module):
-    def __init__(self, input_size, hidden_size=64, num_layers=2, dropout=0.3):
-        super().__init__()
-        self.lstm = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True,
-                            dropout=dropout if num_layers > 1 else 0.0)
-        self.fc = nn.Linear(hidden_size, 1)
-
-    def forward(self, x):
-        out, _ = self.lstm(x)
-        return self.fc(out[:, -1, :])
-
-
-def make_sequences(df, feats, seq_len=SEQ_LEN):
-    """Per-site sliding windows (mirrors create_sequences_by_site);
-    also returns each sequence's site id."""
-    X, y, sites = [], [], []
-    for sid, g in df.groupby("NHDPlusID"):
-        if len(g) <= seq_len:
-            continue
-        f, lab = g[feats].values, g["wet_dry_next"].values
-        for i in range(len(g) - seq_len):
-            X.append(f[i:i + seq_len])
-            y.append(lab[i + seq_len - 1])
-            sites.append(sid)
-    return np.array(X, dtype=np.float32), np.array(y), np.array(sites)
 
 
 def run_lstm(train_df, test_df, feats, device, seed,

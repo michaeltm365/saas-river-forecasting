@@ -4,8 +4,9 @@ Reproducible retraining of the RGCN wet/dry + discharge forecaster, fixing
 three defects in the originally released model (unused meteorological drivers,
 unfed static features, train/val normalization leakage) and replacing the
 leaky interleaved evaluation split with honest temporal splits. See
-`context/RGCN_RETRAIN_PLAN.md` for the full rationale and
-`results/rgcn_eval_retrain*.md` for the resulting metrics.
+`context/RGCN_RETRAIN_PLAN.md` (kept on the `rgcn-retrain` branch, with the
+full retrain-history results) for the rationale; canonical metrics live under
+`results/flagship/`.
 
 ## Requirements
 
@@ -65,7 +66,8 @@ CUDA_VISIBLE_DEVICES=0 uv run python -m rgcn.pipeline.train
 # 5. Export per-day prediction CSVs for all windows
 CUDA_VISIBLE_DEVICES=0 uv run python -m rgcn.pipeline.export_predictions
 
-# 6. Metrics report (writes results/rgcn_eval_retrain*.md)
+# 6. Metrics report (writes the config's eval_report path,
+#    e.g. results/flagship/rgcn_eval_flag_q65.md)
 uv run python -m rgcn.pipeline.eval_report
 ```
 

@@ -2,7 +2,7 @@
 
 This directory preserves the **as-released** RGCN model, split, graph, and eval so
 the paper's current numbers stay reproducible while the `rgcn-retrain` branch
-regenerates everything under new filenames. See `RGCN_RETRAIN_PLAN.md` §8.
+regenerates everything under new filenames. See `context/RGCN_RETRAIN_PLAN.md` §8 (on the `rgcn-retrain` branch).
 
 **Do not overwrite or delete anything referenced here.** All retrain outputs use
 new filenames (e.g. `best_model_retrain.pt`, `hja_graph_drivers.gpickle`,

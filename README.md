@@ -47,7 +47,6 @@ This repository contains the code and analysis for our research on machine learn
 ├── results/
 │   ├── flagship/                    # CANONICAL results (FLAGSHIP_RESULTS.md + per-run reports)
 │   ├── baselines/                   # LR / XGBoost / LSTM-HOBO metrics from the hja CLIs
-│   ├── rgcn_eval_retrain*.md        # Earlier retrain metrics (per split variant)
 │   └── as_released_2026-06/         # Manifest of the archived released baseline (tag: results-as-released)
 ├── download_data.py                 # Fetch ScienceBase + Hugging Face data into data/
 ├── classical_lstm_hobo_results.md   # LR, XGBoost, LSTM (HOBO-only) results summary

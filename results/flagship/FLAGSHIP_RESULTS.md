@@ -3,7 +3,8 @@
 **Status: these are the candidate paper-revision results**, produced after the
 2026-09-01 readjustment ("keep a subset of flagship RGCN results, ignore the
 earlier site-based comparison work"). Everything predating this campaign is
-branch history (`context/RGCN_RETRAIN_TRAJECTORY.md`) and is superseded here.
+branch history (`context/RGCN_RETRAIN_TRAJECTORY.md`, kept on the
+`rgcn-retrain` branch only) and is superseded here.
 Multi-seed = seeds 42/43/44 (mean ± std). Single-seed rows are seed 42.
 
 ## 1. The flagship model and protocol

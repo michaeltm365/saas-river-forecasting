@@ -39,18 +39,35 @@ training window with any val-period date in its inputs (structurally clean on
 the train-sees-val channel); ph retains a small residual (post-block training
 windows include block dates among input days) documented for §2.4.
 
-## 3. RGCN headline numbers (val, horizons pooled, Acc)
+## 3. RGCN headline numbers (canonical: Day-3 forecasts, daily val grid)
 
-| Split | s42 / s43 / s44 | Mean ± std | AUC (s42) |
-|---|---|---|--:|
-| ph | 0.957 / 0.962 / 0.969 | **0.963 ± 0.005** | 0.985 |
-| q65 | 0.950 / 0.968 / 0.969 | 0.962 ± 0.009 | 0.982 |
-| q80 | 0.946 / 0.948 / 0.951 | 0.948 ± 0.002 | 0.972 |
+**Canonical reporting (adopted 2026-09-06): Day-3 (t+3) predictions on the
+stride-1 daily validation grid — no pooled-horizon numbers.** q65, seeds
+42/43/44 (per-seed Acc 0.946 / 0.967 / 0.968), from
+`predictions_flag_q65*_stride1/` day-3 exports:
 
-Horizon profile is flat-to-rising (ph s42: 0.951 / 0.958 / 0.961 d1/d2/d3) —
-no leaky-tail artifact. Discharge under strict masking (ph s42): NSE 0.860
-(d1) → 0.757 (d3) — the honest "no weather forecast" floor.
-Reports: `results/flagship/rgcn_eval_flag_*.md`.
+| Scope | N | Acc | AUC | Wet F1 |
+|---|--:|--:|--:|--:|
+| All | 945 | **0.960 ± 0.010** | 0.982 ± 0.001 | 0.974 ± 0.007 |
+| Headwater (≤2) | 780 | 0.957 ± 0.013 | 0.981 ± 0.001 | 0.971 ± 0.008 |
+| Tailwater (≥3) | 165 | 0.978 ± 0.003 | 0.995 ± 0.003 | 0.986 ± 0.002 |
+| HOBO only | 908 | 0.962 ± 0.011 | 0.986 ± 0.002 | 0.976 ± 0.007 |
+
+Per-class (all rows): dry P/R/F1 0.895 / 0.945 / 0.919; wet 0.983 / 0.965 /
+0.974. Convention robustness: pooled stride-3 (N=968, old headline
+0.962 ± 0.009) and Day-3 stride-3 (N=314, 0.962 ± 0.013) agree with the
+canonical numbers to ~0.002 everywhere — the horizon profile is flat, so
+the choice is presentational. Adjacent-day rows are autocorrelated (ρ up
+to 1.0), so per-row N overstates effective sample size; seed spread is the
+uncertainty device. Paper Table 3 is two-panel: (a) full validation sets,
+(b) the 928-row intersection with the LSTM validation set (RGCN
+0.961 ± 0.010 there; §6).
+
+Secondary splits (diagnostic; stride-3 pooled eval reports,
+`results/flagship/rgcn_eval_flag_*.md`): ph 0.963 ± 0.005, q80
+0.948 ± 0.002. Discharge under strict masking (s42): ph NSE 0.860 (d1) →
+0.757 (d3); q65 0.938 (d1) → 0.396 (d3) — the honest "no weather forecast"
+floor.
 
 ## 4. Spatial transfer (with-sensor site holdout, flag_sh)
 

@@ -132,31 +132,42 @@ classification table regardless.
   Statics are worth ~nothing for wet/dry and a little for discharge —
   the empirical resolution of the §3.4 narrative conflict.
 
-## 9. Copula annual dry-day estimation (all splits, split-matched models)
+## 9. Copula annual dry-day estimation (canonical: calibrated q65)
 
-`results/flagship/copula_dryday_allsplits.md` (+ ph-only
-`copula_dryday.md`). ρ fixed to genuine lag-1 (consecutive-day pairs on the
-raw daily HOBO series over each split's training dates — the released
-notebook's stride-3 rows computed lag-3 mislabeled as lag-1). Each split
-scored with ITS OWN trained model (seed 42), stride-1 day-3 export.
+`results/flagship/copula_dryday_allsplits.md` (+ superseded ph-only
+`copula_dryday.md`); shared implementation `src/hja/copula.py`. ρ fixed to
+genuine lag-1 (consecutive-day pairs on the raw daily HOBO series over the
+split's training dates — the released notebook's stride-3 rows computed
+lag-3 mislabeled as lag-1). Each split scored with ITS OWN trained model
+(seed 42), stride-1 day-3 export; per-site simulation seeds.
 
-Coverage: ph 2/8, q65 3/8, q80 2/8, site 2/5 — versus the released 7/8. The
-failure mode is identical across all four independently trained models:
+**Canonical (q65, adopted Sep 2026): Platt calibration + ρ ceiling 0.98,
+scored on all 22 HOBO reaches with ≥20 val labels — coverage 18/22 (82%),
+mean 95% CI width 27.9 days.** The calibrator is fit on the q65 model's own
+training-period Day-3 predictions (579 HOBO-labeled stride-3 rows). The raw
+method on the same 22 reaches covers 6/22 (27%) with 58.9-day intervals:
 
-- **Intermittent reaches are covered or near-missed everywhere** — including
-  the spatially held-out reaches (site 100137: true 249.7, mean 218.6;
-  097170: true 147.7, mean 146.9 — an ungauged-product success).
-- **Perennial reaches (0 true dry days) are missed everywhere**: mean p_dry
-  sits at 2–10% instead of ~0, integrating to 6–37 predicted dry days/yr
-  with CIs excluding 0. A **probability-calibration limitation** of the
-  honest model (the released model's 7/8 was partly an artifact of its
-  defect-driven overconfidence). Fix not yet run: Platt/isotonic calibration
-  fit on training probabilities, plus a ρ ceiling (ρ ≈ 1.0 estimates at
-  strongly intermittent sites degenerate the AR(1) into uninformatively wide
-  intervals).
-- ph's "top-8 by val count" is arbitrary (13 sites tied at 36); q65 is the
-  best-behaved split for this analysis (meaningful selection, ~80
-  consecutive-day ρ pairs, but late-season-biased "typical year").
+- The gain is almost entirely **probability calibration**: the honest
+  model's mean p_dry at perennial reaches is ~4.5%, integrating to 6–25
+  spurious dry days/yr; Platt drops it below 1% and all but one perennial
+  reach (167692) is covered. (The released 7/8 was partly an artifact of the
+  defective model's overconfidence.)
+- The **ρ ceiling** keeps ρ ≈ 1.0 reaches' AR(1) intervals informative
+  (e.g. 097170: raw CI [0, 365] → [85, 254]).
+- Remaining misses are informative, not systematic: 097170 (true 349.8 vs
+  [85, 254]) and 167704 (77.2 vs [43, 70]) are genuine under-predictions of
+  dryness at the two most intermittent reaches; 096564 (10.1 vs [1, 8]) is a
+  near-miss; 167692 is a site-specific miscalibration.
+- Isotonic calibration scores similarly (17/22) but collapses perennial
+  intervals to a degenerate [0, 0]; Platt avoids that and is canonical.
+- Caveat: single-season 579-row calibration pool — a leave-site-out
+  calibration check is the natural robustness follow-up (not run).
+
+Diagnostic (raw method, original site selections): ph 2/8, q80 2/8, site
+2/5 — the calibration failure mode is shared by every independently trained
+flagship model, and the intermittent-reach successes include the spatially
+held-out reaches (site 100137: true 249.7, mean 219.9; 097170: true 147.7,
+mean 146.7 — an ungauged-product success).
 
 ## 10. Implications queued for the paper revision
 
@@ -169,8 +180,9 @@ failure mode is identical across all four independently trained models:
    memorization by construction".
 4. Table 8 → flagship sweep; §4.1 multitask claim → consolidation claim.
 5. Persistence row in every classification table; frame per §7 above.
-6. §3.6: q65 copula, intermittent-site successes + calibration limitation
-   honestly; calibration experiment optional before submission.
+6. §3.6: canonical q65 copula = Platt + ρ-clip on all 22 HOBO val reaches,
+   18/22 (82%) coverage; report raw 6/22 as the motivating comparison and
+   the two intermittent under-predictions as residual limitation.
 7. LSTM tables: decide ADASYN (released protocol) vs no-ADASYN (better,
    deviation) headline; matched-set table (§6) as the cross-model anchor.
 

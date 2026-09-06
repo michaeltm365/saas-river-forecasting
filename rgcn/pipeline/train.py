@@ -123,6 +123,12 @@ def main() -> int:
     T, N, _ = X_time.shape
     assert X_time.shape[2] + X_static.shape[1] == F.INPUT_DIM
 
+    # Feature ablation: drop the 17 static watershed vars entirely (model sees
+    # only the time-varying block). Verified against the checkpoint at export.
+    exclude_static = bool((config.get("features") or {}).get("exclude_static"))
+    if exclude_static:
+        X_static = X_static[:, :0]
+
     # Site holdout (with-sensor regime): held-out reaches stay in the graph and
     # keep their observation-derived INPUT features, but their labels are
     # removed from the loss (train and val) — the masked loss skips NaNs. Their
@@ -159,11 +165,14 @@ def main() -> int:
     # Feature ablation (e.g. no-lag variant): subset time-varying columns.
     exclude_time = (config.get("features") or {}).get("exclude_time") or []
     keep_time_cols, feature_vars = F.time_feature_selection(exclude_time)
+    if exclude_static:
+        feature_vars = [v for v in feature_vars if v not in F.STATIC_FEATURE_SET]
     input_dim = len(feature_vars)
     keep_arg = keep_time_cols if exclude_time else None
     print(f"Windows: {len(train_ids)} train / {len(val_ids)} val | epochs={epochs} "
           f"| forecast_mask={forecast_mask}"
-          + (f" | exclude_time={exclude_time}" if exclude_time else ""))
+          + (f" | exclude_time={exclude_time}" if exclude_time else "")
+          + (" | exclude_static" if exclude_static else ""))
 
     # Model --------------------------------------------------------------
     model = create_model(config, adj, input_dim, device)
@@ -204,6 +213,7 @@ def main() -> int:
                 "forecast_mask": forecast_mask,
                 "feature_vars": feature_vars,
                 "exclude_time": exclude_time,
+                "exclude_static": exclude_static,
                 "site_holdout": holdout_ids,
                 "target_vars": F.TARGET_VARS,
                 "input_dim": input_dim,

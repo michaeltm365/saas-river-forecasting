@@ -97,7 +97,19 @@ def main() -> int:
             f"Config features.exclude_time={exclude_time} but checkpoint was "
             f"trained with {ckpt_exclude} — wrong config/checkpoint pairing."
         )
+    exclude_static = bool((config.get("features") or {}).get("exclude_static"))
+    ckpt_exclude_static = bool(ckpt.get("exclude_static", False))
+    if ckpt_exclude_static != exclude_static:
+        raise RuntimeError(
+            f"Config features.exclude_static={exclude_static} but checkpoint was "
+            f"trained with {ckpt_exclude_static} — wrong config/checkpoint pairing."
+        )
+    if exclude_static:
+        X_static = X_static[:, :0]
+        static_b = X_static.unsqueeze(0)
     keep_time_cols, feature_vars = F.time_feature_selection(exclude_time)
+    if exclude_static:
+        feature_vars = [v for v in feature_vars if v not in F.STATIC_FEATURE_SET]
     input_dim = len(feature_vars)
     keep_idx = (torch.tensor(keep_time_cols, device=device)
                 if exclude_time else None)

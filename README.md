@@ -20,21 +20,28 @@ This repository contains the code and analysis for our research on machine learn
 │   └── xgb.ipynb                    # XGBoost: training, evaluation, inference
 ├── lstm/
 │   ├── lstm_hobo_sites.ipynb        # LSTM on HOBO sensor sites only (discrete observations)
-│   ├── lstm_all_sites.ipynb         # LSTM on HOBO + discretized discharge (mixed data)
+│   ├── lstm_all_sites.ipynb         # CANONICAL LSTM (all sites): q65 temporal split, ADASYN
 │   └── lstm_all_sites_results.md    # Mixed-data LSTM results (distributional mismatch finding)
 ├── rgcn/
-│   ├── pipeline/                    # Reproducible RGCN retrain pipeline — see rgcn/pipeline/README.md
-│   ├── config.yml                   # Retrain config (+ config_q65.yml / config_phases.yml split variants)
+│   ├── pipeline/                    # Reproducible RGCN training pipeline — see rgcn/pipeline/README.md
+│   ├── flagship/                    # CANONICAL RGCN configs (config_q65.yml + split/seed/ablation variants)
+│   ├── config.yml                   # Earlier retrain config (+ config_q65.yml / config_phases.yml variants)
 │   ├── inspect_driver_weights.py    # Verify drivers/statics are active in a checkpoint
 │   ├── build_graph.ipynb            # [as-released] Stream network graph construction
 │   ├── train_gnn.ipynb              # [as-released] RGCN model training
-│   ├── rgcn_eval.ipynb              # RGCN evaluation: metrics, stream order, perennial status
+│   ├── rgcn_eval.ipynb              # CANONICAL RGCN evaluation: metrics, stream order, annual dry-day copula
 │   ├── rgcn_eval_results.md         # [as-released] RGCN evaluation results summary
 │   └── rgcn_config.yaml             # [as-released] RGCN model configuration
+├── benchmarks/
+│   ├── lstm_flagship_splits.py      # CANONICAL LSTM (all sites) runs on the flagship splits
+│   ├── flagship_analysis.py         # Persistence baseline + matched cross-model comparison
+│   ├── flagship_copula_all.py       # Annual dry-day (Gaussian copula) estimation, all splits
+│   └── flagship_ablation_eval.py    # RGCN ablation sweep table
 ├── synthetic_data/
 │   └── gam.ipynb                    # GAM-based synthetic data generation
 ├── results/
-│   ├── rgcn_eval_retrain*.md        # Retrained-RGCN metrics (per split variant)
+│   ├── flagship/                    # CANONICAL results (FLAGSHIP_RESULTS.md + per-run reports)
+│   ├── rgcn_eval_retrain*.md        # Earlier retrain metrics (per split variant)
 │   └── as_released_2026-06/         # Manifest of the archived released baseline (tag: results-as-released)
 ├── download_data.py                 # Fetch ScienceBase + Hugging Face data into data/
 ├── classical_lstm_hobo_results.md   # LR, XGBoost, LSTM (HOBO-only) results summary
@@ -48,6 +55,63 @@ This repository contains the code and analysis for our research on machine learn
 > [`rgcn/pipeline/README.md`](rgcn/pipeline/README.md). The as-released
 > baseline is preserved untouched (git tag `results-as-released`,
 > `results/as_released_2026-06/MANIFEST.md`).
+
+## Canonical results and how to reproduce them
+
+The paper's canonical neural models are the **flagship RGCN** and the
+**LSTM (all sites, ADASYN)**, both evaluated on the **q65 temporal split**
+(cutoff 2020-09-10, the 0.65 quantile of wet/dry label dates; training strictly
+precedes validation, so no validation-period date appears in any training
+input). The flagship RGCN uses 30-day windows, 35 input features (incl. 17
+static watershed features, no 7-day lags), and strict forecast-tail masking
+(lagged observations, max-depth, AND meteorological drivers frozen at day *t*
+for the t+1..t+3 tail — no post-issue-day information). Headline numbers
+(seeds 42/43/44, validation, horizons pooled):
+
+| Model | N (val) | Accuracy | ROC-AUC | F1 |
+|---|--:|--:|--:|--:|
+| RGCN (flagship, q65) | 968 | 0.962 ± 0.009 | 0.984 ± 0.001 | 0.975 ± 0.006 |
+| LSTM (all sites, q65) | 10,512 | 0.951 ± 0.008 | 0.870 ± 0.041 | 0.974 ± 0.004 |
+| Persistence baseline | 945 | 0.962 | — | 0.975 |
+
+The full campaign (all four splits, held-out-site transfer, ablations,
+persistence, matched cross-model comparison, copula) is consolidated in
+[`results/flagship/FLAGSHIP_RESULTS.md`](results/flagship/FLAGSHIP_RESULTS.md).
+
+After setting up the environment and data (sections below), reproduce the
+canonical results with:
+
+```bash
+# 1) Canonical RGCN (q65, seed 42; use config_q65_s43.yml / _s44.yml for the
+#    other seeds — split/array stages are shared and only need the base run)
+export RGCN_CONFIG=rgcn/flagship/config_q65.yml
+uv run python -m rgcn.pipeline.make_splits
+uv run python -m rgcn.pipeline.prepare_data
+uv run python -m rgcn.pipeline.build_graph        # once per clone
+CUDA_VISIBLE_DEVICES=0 uv run python -m rgcn.pipeline.train
+CUDA_VISIBLE_DEVICES=0 uv run python -m rgcn.pipeline.export_predictions
+uv run python -m rgcn.pipeline.eval_report        # -> results/flagship/rgcn_eval_flag_q65.md
+
+# 2) Daily-grid (stride-1) Day-3 export over the val period — needed by the
+#    copula section of rgcn/rgcn_eval.ipynb and the analysis scripts
+CUDA_VISIBLE_DEVICES=0 uv run python -m rgcn.pipeline.export_predictions \
+  --eval-stride 1 --day3-range "2020-09-11:2020-12-31"
+
+# 3) Canonical LSTM (all sites): all four flagship splits x seeds 42/43/44
+#    (canonical rows = q65) -> results/flagship/lstm_all/
+CUDA_VISIBLE_DEVICES=0 uv run python benchmarks/lstm_flagship_splits.py
+
+# 4) Persistence baseline + matched cross-model tables; copula on all splits
+uv run python benchmarks/flagship_analysis.py
+uv run python benchmarks/flagship_copula_all.py
+```
+
+The two canonical notebooks display these results (and are committed with
+executed outputs): [`rgcn/rgcn_eval.ipynb`](rgcn/rgcn_eval.ipynb) (RGCN metrics,
+stream order, HOBO vs discretized, and the canonical annual dry-day copula
+experiment — the q65-trained model on the q65 validation period) and
+[`lstm/lstm_all_sites.ipynb`](lstm/lstm_all_sites.ipynb) (canonical LSTM run at
+seed 42 plus the multi-seed summary).
 
 ## Model Weights
 

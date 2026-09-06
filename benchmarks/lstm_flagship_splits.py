@@ -94,9 +94,35 @@ def assign_split(split: str, tdates: pd.DatetimeIndex, sites: np.ndarray):
     return out
 
 
+def prepare_frame() -> tuple[pd.DataFrame, list[str]]:
+    """Released all-sites frame + per-row target dates / label sources.
+
+    Shared by main() and lstm/lstm_all_sites.ipynb so the notebook runs the
+    exact canonical preprocessing.
+    """
+    dfa = build_central_df_allsites()
+    # Label dates: wet_dry_next is a 3-ROW shift within site (released
+    # protocol); recover each label's actual date the same way. Rows dropped
+    # by the trailing dropna leave the positional shift intact, so only the
+    # last 3 rows per site need the calendar fallback.
+    dfa["target_date"] = dfa.groupby("NHDPlusID")["Date"].shift(-3)
+    dfa["target_date"] = dfa["target_date"].fillna(
+        dfa["Date"] + pd.Timedelta(days=3))
+    dfa["label_is_hobo"] = (dfa.groupby("NHDPlusID")["is_hobo"].shift(-3)
+                            .fillna(0).astype(int))
+    X_all, feats = feature_frame(dfa)
+    # label_is_hobo is a scoring helper, NOT an input feature (feature_frame
+    # picks up any numeric column outside DROP_COLS).
+    feats = [c for c in feats if c != "label_is_hobo"]
+    dfa = pd.concat([dfa, X_all.drop(columns=[c for c in X_all.columns
+                                              if c in dfa.columns])], axis=1)
+    print(f"all-sites frame: {len(dfa):,} rows, {len(feats)} features")
+    return dfa, feats
+
+
 def train_eval(split: str, seed: int, dfa: pd.DataFrame, feats: list[str],
                device: torch.device, use_adasyn: bool = True,
-               suffix: str = "") -> dict:
+               suffix: str = "", extras: dict | None = None) -> dict:
     np.random.seed(seed)
     torch.manual_seed(seed)
 
@@ -187,6 +213,9 @@ def train_eval(split: str, seed: int, dfa: pd.DataFrame, feats: list[str],
     print(f"[{split} s{seed}] all: acc={m['all']['Accuracy']:.3f} "
           f"auc={m['all']['ROC-AUC']:.3f} dryF1={m['all']['DryF1']:.3f} "
           f"(N={m['all']['N']})")
+    if extras is not None:
+        extras.update(model=model, preds=out, feats=feats,
+                      X_val=X_va, y_val=y[va], hobo_val=hobo[va])
     return m
 
 
@@ -202,23 +231,7 @@ def main() -> int:
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     print(f"Device: {device} | ADASYN={'on' if use_adasyn else 'OFF'}")
 
-    dfa = build_central_df_allsites()
-    # Label dates: wet_dry_next is a 3-ROW shift within site (released
-    # protocol); recover each label's actual date the same way. Rows dropped
-    # by the trailing dropna leave the positional shift intact, so only the
-    # last 3 rows per site need the calendar fallback.
-    dfa["target_date"] = dfa.groupby("NHDPlusID")["Date"].shift(-3)
-    dfa["target_date"] = dfa["target_date"].fillna(
-        dfa["Date"] + pd.Timedelta(days=3))
-    dfa["label_is_hobo"] = (dfa.groupby("NHDPlusID")["is_hobo"].shift(-3)
-                            .fillna(0).astype(int))
-    X_all, feats = feature_frame(dfa)
-    # label_is_hobo is a scoring helper, NOT an input feature (feature_frame
-    # picks up any numeric column outside DROP_COLS).
-    feats = [c for c in feats if c != "label_is_hobo"]
-    dfa = pd.concat([dfa, X_all.drop(columns=[c for c in X_all.columns
-                                              if c in dfa.columns])], axis=1)
-    print(f"all-sites frame: {len(dfa):,} rows, {len(feats)} features")
+    dfa, feats = prepare_frame()
 
     summary = {}
     for split in ("ph", "q65", "q80", "site"):

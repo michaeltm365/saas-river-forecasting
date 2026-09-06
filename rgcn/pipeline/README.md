@@ -80,8 +80,18 @@ uv run python rgcn/inspect_driver_weights.py   # driver weight magnitudes
 
 ## Split variants
 
+> **Canonical model:** the paper's RGCN is the *flagship* configuration
+> `rgcn/flagship/config_q65.yml` — q65 temporal split, 30-day windows, strict
+> `obs+drivers` forecast-tail masking, no lag-7 features (35 inputs incl. 17
+> statics). Seed variants `config_q65_s43.yml` / `config_q65_s44.yml` share
+> its split/array files; the other flagship splits (`config_ph`, `config_q80`,
+> `config_sh`) and the one-factor ablation configs live alongside it under
+> `rgcn/flagship/`. See the repo README's "Canonical results" section for the
+> exact command sequence.
+
 | Config | Split | Val wet/dry labels |
 |---|---|--:|
+| `rgcn/flagship/config_q65.yml` | **canonical**: temporal cutoff @ q0.65 (2020-09-10), flagship protocol | 968 |
 | `rgcn/config.yml` | temporal cutoff @ q0.80 of label dates (2020-09-28) | 576 |
 | `rgcn/config_q65.yml` | temporal cutoff @ q0.65 (2020-09-10) | 968 |
 | `rgcn/config_phases.yml` | 3×12-day blocked holdout (drying / peak-dry / rewetting) with 7-day guard buffers | 784 |

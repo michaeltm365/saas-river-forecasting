@@ -1,11 +1,15 @@
-"""Fast in-memory eval of the FLAGSHIP ablation checkpoints (ph split).
+"""Fast in-memory eval of the FLAGSHIP ablation checkpoints.
 
 Flagship protocol: A-strict (obs+drivers tail mask), no lag-7 features,
-30-day windows, phases split with guard_days=3. Loads each ablation config +
-checkpoint, runs only the val windows, and assembles one Table-8-style
-report. Supports the no-statics row (features.exclude_static).
+30-day windows. Loads each ablation config + checkpoint, runs only the val
+windows, and assembles one Table-8-style report. Supports the no-statics
+row (features.exclude_static).
 
-Run:  CUDA_VISIBLE_DEVICES=<n> uv run python benchmarks/flagship_ablation_eval.py
+Family selected by ABL_FAMILY env var:
+  ph  (default) — phases split, rgcn/flagship/ablations/, rgcn_ablation_sweep.md
+  q65           — q65 split, rgcn/flagship/ablations_q65/, rgcn_ablation_sweep_q65.md
+
+Run:  CUDA_VISIBLE_DEVICES=<n> [ABL_FAMILY=q65] uv run python benchmarks/flagship_ablation_eval.py
 """
 
 from __future__ import annotations
@@ -32,24 +36,45 @@ from rgcn.pipeline.windows import (  # noqa: E402
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-ROWS = [
-    ("default (λ 1.0/0.5, fpw 2, h64, lr 1e-3, do 0.1, wd 1e-4)", None),
-    ("λ_reg 0.5 / λ_cls 1.0", "rgcn/flagship/ablations/config_l05c10.yml"),
-    ("λ_reg 1.0 / λ_cls 1.0", "rgcn/flagship/ablations/config_l10c10.yml"),
-    ("discharge-only (λ_cls 0)", "rgcn/flagship/ablations/config_reg_only.yml"),
-    ("wet/dry-only (λ_reg 0)", "rgcn/flagship/ablations/config_cls_only.yml"),
-    ("fpw 1 (unweighted BCE)", "rgcn/flagship/ablations/config_fpw1.yml"),
-    ("fpw 4", "rgcn/flagship/ablations/config_fpw4.yml"),
-    ("hidden 32", "rgcn/flagship/ablations/config_h32.yml"),
-    ("hidden 128", "rgcn/flagship/ablations/config_h128.yml"),
-    ("lr 3e-4", "rgcn/flagship/ablations/config_lr3e4.yml"),
-    ("lr 3e-3", "rgcn/flagship/ablations/config_lr3e3.yml"),
-    ("dropout 0.0", "rgcn/flagship/ablations/config_do00.yml"),
-    ("dropout 0.3", "rgcn/flagship/ablations/config_do03.yml"),
-    ("weight_decay 0", "rgcn/flagship/ablations/config_wd0.yml"),
-    ("weight_decay 1e-3", "rgcn/flagship/ablations/config_wd1e3.yml"),
-    ("no static features", "rgcn/flagship/ablations/config_nostat.yml"),
+import os  # noqa: E402
+
+FAMILY = os.environ.get("ABL_FAMILY", "ph")
+assert FAMILY in ("ph", "q65"), FAMILY
+ABL_DIR = ("rgcn/flagship/ablations" if FAMILY == "ph"
+           else "rgcn/flagship/ablations_q65")
+DEFAULT_CFG = ("rgcn/flagship/config_ph.yml" if FAMILY == "ph"
+               else "rgcn/flagship/config_q65.yml")
+OUT_NAME = ("rgcn_ablation_sweep.md" if FAMILY == "ph"
+            else "rgcn_ablation_sweep_q65.md")
+SPLIT_DESC = ("phases split rebuilt with guard_days=3 (784 val wet/dry "
+              "labels), classification pooled over horizons 1-3"
+              if FAMILY == "ph" else
+              "q65 temporal split, cutoff 2020-09-10; classification at the "
+              "Day-3 horizon only (canonical convention; 314 stride-3 val "
+              "labels)")
+NOISE_DESC = ("~±0.02 (multi-seed flagship: 0.963 ± 0.005)" if FAMILY == "ph"
+              else "~±0.02-0.03 at N=314 (multi-seed flagship q65 Day-3: "
+              "0.962 ± 0.013)")
+
+_ABL = [
+    ("λ_reg 0.5 / λ_cls 1.0", "config_l05c10.yml"),
+    ("λ_reg 1.0 / λ_cls 1.0", "config_l10c10.yml"),
+    ("discharge-only (λ_cls 0)", "config_reg_only.yml"),
+    ("wet/dry-only (λ_reg 0)", "config_cls_only.yml"),
+    ("fpw 1 (unweighted BCE)", "config_fpw1.yml"),
+    ("fpw 4", "config_fpw4.yml"),
+    ("hidden 32", "config_h32.yml"),
+    ("hidden 128", "config_h128.yml"),
+    ("lr 3e-4", "config_lr3e4.yml"),
+    ("lr 3e-3", "config_lr3e3.yml"),
+    ("dropout 0.0", "config_do00.yml"),
+    ("dropout 0.3", "config_do03.yml"),
+    ("weight_decay 0", "config_wd0.yml"),
+    ("weight_decay 1e-3", "config_wd1e3.yml"),
+    ("no static features", "config_nostat.yml"),
 ]
+ROWS = ([("default (λ 1.0/0.5, fpw 2, h64, lr 1e-3, do 0.1, wd 1e-4)", None)]
+        + [(label, f"{ABL_DIR}/{fn}") for label, fn in _ABL])
 
 
 def nse_kge(t, p):
@@ -66,7 +91,7 @@ def nse_kge(t, p):
 
 @torch.no_grad()
 def eval_ckpt(config_path):
-    config = load_config(REPO / (config_path or "rgcn/flagship/config_ph.yml"))
+    config = load_config(REPO / (config_path or DEFAULT_CFG))
     arr = load_arrays(config)
     X_time = torch.from_numpy(arr["X_time"]).to(DEVICE)
     X_static = torch.from_numpy(arr["X_static"]).to(DEVICE)
@@ -93,6 +118,9 @@ def eval_ckpt(config_path):
     model.eval()
     keep_idx = torch.tensor(keep_cols, device=DEVICE)
 
+    # Canonical reporting (q65 family): Day-3 classification only; the ph
+    # family keeps its original pooled-horizon columns.
+    cls_horizons = [3] if FAMILY == "q65" else list(range(1, 4))
     cls_y, cls_p = [], []
     disch = {1: ([], []), 3: ([], [])}
     for wid in val_ids:
@@ -105,10 +133,11 @@ def eval_ckpt(config_path):
         for h in range(1, horizon + 1):
             tl = seq_len + h - 1
             tg = start + tl
-            yw = y_all[tg, :, F.WETDRY_IDX]
-            ok = ~np.isnan(yw)
-            cls_y.append(yw[ok].round())
-            cls_p.append(pred[ok, tl, F.WETDRY_IDX])
+            if h in cls_horizons:
+                yw = y_all[tg, :, F.WETDRY_IDX]
+                ok = ~np.isnan(yw)
+                cls_y.append(yw[ok].round())
+                cls_p.append(pred[ok, tl, F.WETDRY_IDX])
             if h in disch:
                 yd = y_all[tg, :, F.DISCHARGE_IDX]
                 okd = ~np.isnan(yd)
@@ -136,14 +165,12 @@ def eval_ckpt(config_path):
 
 def main() -> int:
     lines = ["# Flagship RGCN — loss-function ablations + hyperparameter sensitivity", ""]
-    lines.append("Flagship protocol: phases split rebuilt with guard_days=3 "
-                 "(784 val wet/dry labels), A-strict masking (obs+drivers tail "
-                 "frozen), no lag-7 features, 30-day windows, seed 42, "
-                 "patience-20 early stopping. One factor changed per row. "
-                 "Single-seed noise on Acc is ~±0.02 (multi-seed flagship: "
-                 "0.963 ± 0.005); differences inside that band demonstrate "
-                 "robustness, not superiority. Classification pooled over "
-                 "horizons 1-3; discharge in linear CMS. Val loss is not "
+    lines.append(f"Flagship protocol: {SPLIT_DESC}, A-strict masking "
+                 "(obs+drivers tail frozen), no lag-7 features, 30-day "
+                 "windows, seed 42, patience-20 early stopping. One factor "
+                 f"changed per row. Single-seed noise on Acc is {NOISE_DESC}; "
+                 "differences inside that band demonstrate robustness, not "
+                 "superiority. Discharge in linear CMS. Val loss is not "
                  "comparable across λ rows.")
     lines.append("")
     lines.append("| Configuration | Best ep | Val loss | Acc | ROC-AUC | F1 | "
@@ -167,7 +194,7 @@ def main() -> int:
                  "expected near-chance). fpw = dry-class BCE up-weight. "
                  "'no static features' drops all 17 NHDPlus watershed vars "
                  "(input_dim 35 -> 18).")
-    out = REPO / "results/flagship/rgcn_ablation_sweep.md"
+    out = REPO / "results/flagship" / OUT_NAME
     out.write_text("\n".join(lines))
     print("\n".join(lines))
     print(f"\nWrote {out}")

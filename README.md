@@ -71,11 +71,11 @@ input). The flagship RGCN uses 30-day windows, 35 input features (incl. 17
 static watershed features, no 7-day lags), and strict forecast-tail masking
 (lagged observations, max-depth, AND meteorological drivers frozen at day *t*
 for the t+1..t+3 tail — no post-issue-day information). Headline numbers
-(seeds 42/43/44, validation, horizons pooled):
+(seeds 42/43/44; RGCN = Day-3 forecasts on the daily validation grid):
 
 | Model | N (val) | Accuracy | ROC-AUC | F1 |
 |---|--:|--:|--:|--:|
-| RGCN (flagship, q65) | 968 | 0.962 ± 0.009 | 0.984 ± 0.001 | 0.975 ± 0.006 |
+| RGCN (flagship, q65, t+3) | 945 | 0.960 ± 0.010 | 0.982 ± 0.001 | 0.974 ± 0.007 |
 | LSTM (all sites, q65) | 10,512 | 0.951 ± 0.008 | 0.870 ± 0.041 | 0.974 ± 0.004 |
 
 The full campaign (all four splits, held-out-site transfer, ablations,
@@ -96,8 +96,9 @@ CUDA_VISIBLE_DEVICES=0 uv run python -m rgcn.pipeline.train
 CUDA_VISIBLE_DEVICES=0 uv run python -m rgcn.pipeline.export_predictions
 uv run python -m rgcn.pipeline.eval_report        # -> results/flagship/rgcn_eval_flag_q65.md
 
-# 2) Daily-grid (stride-1) Day-3 export over the val period — needed by the
-#    copula section of rgcn/rgcn_eval.ipynb and the analysis scripts
+# 2) Daily-grid (stride-1) Day-3 export over the val period — the canonical
+#    evaluation grid for the headline numbers, and input to the copula
+#    section of rgcn/rgcn_eval.ipynb and the analysis scripts
 CUDA_VISIBLE_DEVICES=0 uv run python -m rgcn.pipeline.export_predictions \
   --eval-stride 1 --day3-range "2020-09-11:2020-12-31"
 

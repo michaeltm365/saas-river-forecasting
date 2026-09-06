@@ -1,17 +1,18 @@
-"""Gaussian-copula annual dry-day estimation on ALL flagship splits.
+"""Gaussian-copula annual dry-day estimation on the flagship splits.
 
-Extends the ph-only run in flagship_analysis.part_copula:
-  ph   — val = the three 12-day blocks; top-8 HOBO reaches (all tied at 36
-         val labels — selection is arbitrary among ties, noted in output)
-  q65  — val = after 2020-09-10 (49 HOBO val days/site)
-  q80  — val = after 2020-09-28 (31 HOBO val days/site)
-  site — the 5 with-sensor holdout reaches (flag_sh predictions), full
-         labeled season; the annual-dry-day product at spatially unseen sites
+CANONICAL (q65): Platt-calibrated probabilities + rho ceiling, scored on ALL
+HOBO reaches with >= MIN_VAL q65 validation labels (22 reaches). The Platt
+calibrator is fit on the q65 model's TRAINING-period Day-3 predictions
+(HOBO-labeled stride-3 rows, day-3 date <= 2020-09-10). Raw-method coverage
+on the same reaches is reported alongside as the diagnostic comparison.
 
-Fix vs the earlier version: rho is estimated from the RAW daily HOBO label
-series on the split's TRAINING dates (consecutive calendar-day pairs only),
-so it no longer depends on export coverage — the q65/q80 stride-1 exports
-only span val dates. Predictions: seed-42 stride-1 day-3 exports.
+DIAGNOSTIC (ph / q80 / site): the raw uncalibrated method on the original
+site selections, retained to show the probability-calibration failure mode
+is shared by every independently trained flagship model.
+
+Predictions: each split's own seed-42 stride-1 Day-3 export. Simulation
+seeds are per-site (hja.copula), so numbers are order-independent and match
+rgcn/rgcn_eval.ipynb exactly.
 
 Run:  uv run python benchmarks/flagship_copula_all.py
 """
@@ -21,47 +22,28 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
-from scipy.stats import norm
 
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "benchmarks"))
 from flagship_analysis import (  # noqa: E402  (imports build STATUS too)
     CUTOFFS, GUARD_DAYS, HOLDOUT, SEASON, in_blocks, stride1_dir)
+from hja.copula import (RHO_CEIL, fit_platt, load_hobo_daily,  # noqa: E402
+                        site_row)
 
 OUT = REPO / "results/flagship/copula_dryday_allsplits.md"
-N_SIMS, HORIZON_DAYS = 10_000, 365
+MIN_VAL = 20  # q65: minimum val labels for a reach to be scored
 
-
-def hobo_daily() -> pd.DataFrame:
-    obs = pd.read_csv(REPO / "data/sciencebase/obs.csv")
-    obs["Date"] = pd.to_datetime(obs["Date"])
-    obs["NHDPlusID"] = obs["NHDPlusID"].astype("int64")
-    g = (obs.groupby(["NHDPlusID", "Date"])["HoboWetDry0.05"].mean()
-            .round().dropna().rename("wet").reset_index())
-    return g
-
-
-HOBO = hobo_daily()
+HOBO = load_hobo_daily()
 HOBO_IDS = set(HOBO["NHDPlusID"])
+HOBO_KEYS = set(map(tuple, HOBO[["NHDPlusID", "Date"]]
+                    .itertuples(index=False, name=None)))
 
 
-def train_dates_mask(split: str, dates: pd.Series) -> pd.Series:
+def train_dates_fn(split: str):
     if split in ("ph", "site"):
-        return ~in_blocks(dates, GUARD_DAYS)
-    return dates <= pd.Timestamp(CUTOFFS[split])
-
-
-def rho_lag1(split: str, site: int) -> tuple[float, int]:
-    s = HOBO[HOBO["NHDPlusID"] == site].sort_values("Date")
-    s = s[train_dates_mask(split, s["Date"])]
-    v = s["wet"].to_numpy()
-    consec = s["Date"].diff().dt.days.to_numpy()[1:] == 1
-    a, b = v[:-1][consec], v[1:][consec]
-    if len(a) < 3 or a.std() == 0 or b.std() == 0:
-        return 0.0, int(len(a))
-    return float(np.corrcoef(a, b)[0, 1]), int(len(a))
+        return lambda d: ~in_blocks(d, GUARD_DAYS)
+    return lambda d: d <= pd.Timestamp(CUTOFFS[split])
 
 
 def val_predictions(split: str) -> pd.DataFrame:
@@ -70,6 +52,7 @@ def val_predictions(split: str) -> pd.DataFrame:
                               "pred_wetdry_prob", "has_true_label"],
                      parse_dates=["date"])
     df = df[df["has_true_label"]].copy()
+    df["site_id"] = df["site_id"].astype("int64")
     if split == "ph":
         df = df[in_blocks(df["date"]) & df["site_id"].isin(HOBO_IDS)]
     elif split in CUTOFFS:
@@ -82,66 +65,112 @@ def val_predictions(split: str) -> pd.DataFrame:
     return df
 
 
-def run_split(split: str, rng) -> list[str]:
-    df = val_predictions(split)
-    if split == "site":
-        sites = [s for s in HOLDOUT if (df["site_id"] == s).any()]
-        pick = f"all {len(sites)} holdout reaches"
-    else:
-        counts = df.groupby("site_id").size().sort_values(ascending=False)
-        sites = counts.head(8).index.tolist()
-        tied = int((counts == counts.iloc[0]).sum())
-        pick = ("top-8 by val label count"
-                + (f" (NOTE: {tied} sites tied at {counts.iloc[0]} labels — "
-                   f"selection arbitrary among ties)" if tied > 8 else ""))
+def q65_calibrator():
+    """Platt fit on the q65 model's training-period Day-3 predictions
+    (HOBO-labeled rows only, stride-3 export)."""
+    tr = pd.read_csv(REPO / "data/retrain/flagship/predictions_flag_q65/"
+                     "train_val_predictions_day3.csv",
+                     usecols=["date", "site_id", "true_wetdry",
+                              "pred_wetdry_prob", "has_true_label"],
+                     parse_dates=["date"])
+    tr = tr[tr["has_true_label"]
+            & (tr["date"] <= pd.Timestamp(CUTOFFS["q65"]))].copy()
+    tr["site_id"] = tr["site_id"].astype("int64")
+    tr = tr[[(r.site_id, r.date) in HOBO_KEYS for r in tr.itertuples()]]
+    print(f"q65 Platt calibration pool: {len(tr)} HOBO-labeled train rows")
+    return fit_platt(tr["pred_wetdry_prob"], tr["true_wetdry"].round())
+
+
+def rows_for(split, sites, df, calibrate, rho_ceil):
+    tdf = train_dates_fn(split)
     rows = []
     for site in sites:
         sv = df[df["site_id"] == site]
-        rho, n_pairs = rho_lag1(split, site)
-        p_dry = 1.0 - sv["pred_wetdry_prob"].to_numpy()
-        innov = rng.standard_normal((N_SIMS, HORIZON_DAYS)) * np.sqrt(
-            max(1 - rho ** 2, 0.0))
-        z = np.empty((N_SIMS, HORIZON_DAYS))
-        z[:, 0] = rng.standard_normal(N_SIMS)
-        for t in range(1, HORIZON_DAYS):
-            z[:, t] = rho * z[:, t - 1] + innov[:, t]
-        u = norm.cdf(z)
-        sampled = rng.choice(p_dry, size=(N_SIMS, HORIZON_DAYS), replace=True)
-        counts_sim = (u < sampled).sum(axis=1)
-        lo, hi = np.percentile(counts_sim, [2.5, 97.5])
-        true_dry = (1.0 - sv["true_wetdry"].round().mean()) * HORIZON_DAYS
-        rows.append(dict(site=site, n=len(sv), rho=rho, np=n_pairs,
-                         true=true_dry, mean=counts_sim.mean(), lo=lo, hi=hi,
-                         ok=bool(lo <= true_dry <= hi)))
+        rows.append(site_row(site, sv["pred_wetdry_prob"], sv["true_wetdry"],
+                             HOBO, tdf, calibrate, rho_ceil))
     rows.sort(key=lambda r: -r["true"])
-    cov = sum(r["ok"] for r in rows)
-    lines = [f"## {split}  ({pick})", "",
-             "| Site | N val | ρ (lag-1) | ρ pairs | True dry d/yr | "
-             "Mean pred | 95% CI | In CI |",
-             "|---|--:|--:|--:|--:|--:|---|:--:|"]
+    return rows
+
+
+def table(rows, show_used):
+    head = ("| Site | N val | ρ (lag-1) | ρ used | ρ pairs | True dry d/yr | "
+            "Mean pred | 95% CI | In CI |" if show_used else
+            "| Site | N val | ρ (lag-1) | ρ pairs | True dry d/yr | "
+            "Mean pred | 95% CI | In CI |")
+    sep = "|---|--:|--:|--:|--:|--:|" + ("--:|" if show_used else "") + "---|:--:|"
+    lines = [head, sep]
     for r in rows:
-        lines.append(f"| {r['site']} | {r['n']} | {r['rho']:.3f} | {r['np']} | "
-                     f"{r['true']:.1f} | {r['mean']:.1f} | "
+        used = f" {r['rho_used']:.3f} |" if show_used else ""
+        lines.append(f"| {r['site']} | {r['n']} | {r['rho']:.3f} |{used} "
+                     f"{r['np']} | {r['true']:.1f} | {r['mean']:.1f} | "
                      f"[{r['lo']:.1f}, {r['hi']:.1f}] | "
                      f"{'yes' if r['ok'] else 'NO'} |")
-    lines += ["", f"Coverage: {cov}/{len(rows)} ({cov/len(rows):.0%}).", ""]
     return lines
 
 
+def coverage(rows):
+    k = sum(r["ok"] for r in rows)
+    return k, len(rows), f"{k}/{len(rows)} ({k / len(rows):.0%})"
+
+
 def main() -> int:
-    rng = np.random.default_rng(42)
-    lines = ["# Annual dry-day estimation — flagship RGCN, Gaussian copula, all splits", "",
-             "Seed-42 stride-1 day-3 predictions per split; ρ = genuine lag-1 "
-             "autocorrelation of the raw daily HOBO label series on the "
-             "split's TRAINING dates (consecutive-day pairs only). p_dry "
-             "bootstrapped from the split's val-day predictions; observed dry "
-             "d/yr = (1 - val wet fraction) x 365; 10,000 sims/site.", "",
-             "Caveats: ph val = 36 days across three phases; q65/q80 val = "
-             "late season only (dry-biased 'typical year'); 'site' scores the "
-             "flag_sh model at reaches whose labels were masked from its "
-             "loss (with-sensor spatial regime).", ""]
-    for split in ("ph", "q65", "q80", "site"):
-        lines += run_split(split, rng)
+    lines = ["# Annual dry-day estimation — flagship RGCN, Gaussian copula", "",
+             "**Canonical (q65)**: Platt-calibrated Day-3 dry probabilities "
+             f"(calibrator fit on training-period predictions) with a ρ ceiling "
+             f"of {RHO_CEIL}, scored on all HOBO reaches with ≥{MIN_VAL} q65 "
+             "validation labels. Raw-method coverage on the same reaches is "
+             "reported for comparison. ph/q80/site sections use the raw "
+             "uncalibrated method (diagnostic; original site selections). "
+             "ρ = lag-1 autocorrelation from consecutive-day pairs of the raw "
+             "daily HOBO series over each split's training dates; each split "
+             "scored with its own seed-42 stride-1 Day-3 export; 10,000 "
+             "sims/site with per-site seeds.", ""]
+
+    # ---- canonical q65
+    df = val_predictions("q65")
+    counts = df.groupby("site_id").size().sort_values(ascending=False)
+    sites = counts[counts >= MIN_VAL].index.tolist()
+    cal = q65_calibrator()
+    cal_rows = rows_for("q65", sites, df, cal, RHO_CEIL)
+    raw_rows = rows_for("q65", sites, df, None, None)
+    kc, n, cov_c = coverage(cal_rows)
+    kr, _, cov_r = coverage(raw_rows)
+    import numpy as np
+    w_c = np.mean([r["hi"] - r["lo"] for r in cal_rows])
+    w_r = np.mean([r["hi"] - r["lo"] for r in raw_rows])
+    lines += [f"## q65 — CANONICAL (Platt + ρ-clip; all {n} HOBO val reaches)", ""]
+    lines += table(cal_rows, show_used=True)
+    lines += ["", f"Coverage: **{cov_c}**; mean 95% CI width {w_c:.1f} days.",
+              f"Raw method on the same {n} reaches: {cov_r} coverage, mean CI "
+              f"width {w_r:.1f} days — the improvement is almost entirely the "
+              "probability calibration (mean perennial-reach p_dry drops from "
+              "a few percent to <1%); the ρ ceiling keeps intervals at "
+              "ρ≈1.0 reaches informative.", ""]
+
+    # ---- diagnostic raw splits
+    for split in ("ph", "q80", "site"):
+        df = val_predictions(split)
+        if split == "site":
+            sites = [s for s in HOLDOUT if (df["site_id"] == s).any()]
+            pick = f"all {len(sites)} holdout reaches"
+        else:
+            counts = df.groupby("site_id").size().sort_values(ascending=False)
+            sites = counts.head(8).index.tolist()
+            tied = int((counts == counts.iloc[0]).sum())
+            pick = ("top-8 by val label count"
+                    + (f" (NOTE: {tied} sites tied at {counts.iloc[0]} labels "
+                       "— selection arbitrary among ties)" if tied > 8 else ""))
+        rows = rows_for(split, sites, df, None, None)
+        _, _, cov = coverage(rows)
+        lines += [f"## {split} — raw method, diagnostic  ({pick})", ""]
+        lines += table(rows, show_used=False)
+        lines += ["", f"Coverage: {cov}.", ""]
+
+    lines += ["Caveats: q65 val is late-season only (dry-biased 'typical "
+              "year'); the q65 calibration pool is 579 HOBO train rows from a "
+              "single season (a leave-site-out calibration check is the "
+              "natural robustness follow-up); 'site' scores the flag_sh model "
+              "at reaches whose labels were masked from its loss.", ""]
     OUT.write_text("\n".join(lines) + "\n")
     print("\n".join(lines))
     print(f"Wrote {OUT}")

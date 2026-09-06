@@ -2,3 +2,14 @@ CLAUDE.md
 data/
 .venv/
 __pycache__/
+
+# Baseline archive: keep the manifest in git; binary snapshots live on HF/ScienceBase
+results/as_released_2026-06/*
+!results/as_released_2026-06/MANIFEST.md
+
+# context/ holds local working material incl. the pre-decisional USGS draft
+# paper (must never be published). Only the retrain plan is tracked.
+context/*
+!context/RGCN_RETRAIN_PLAN.md
+!context/SITE_HOLDOUT_BASELINES_PLAN.md
+!context/RGCN_RETRAIN_TRAJECTORY.md

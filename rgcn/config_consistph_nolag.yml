@@ -1,0 +1,85 @@
+# =============================================================================
+# RGCN no-lag ablation — spatial-transfer variant (NOT YET RUN)
+# =============================================================================
+# Drops the 4 autoregressive obs-lag features (input_dim 37 -> 33) so the
+# model cannot condition on a site's own recent observations. Motivation
+# (results/rgcn_eval_hjflp_consistph.md): with lag features, missing obs are
+# zero-filled and HoboWetDry_lag_1=0 encodes "dry yesterday", so never-observed
+# reaches default to dry (HJFlp unobserved-tier AUC ~= chance). Removing the
+# lags makes site-holdout and ungauged-site evaluation legitimate: predictions
+# rest on drivers + statics + topology only.
+#
+# NOTE: MaxDepth_{Censor,Threshold,cm} are also site observations (zero-filled
+# where absent). For a fully observation-free variant, add them to
+# features.exclude_time below (input_dim -> 30).
+#
+# SHARES the split map / feature arrays / scaler with config_consistph — run
+# make_splits + prepare_data under config_consistph first; only train /
+# export_predictions / eval_report / eval_hjflp run under this config.
+
+paths:
+  obs_csv: "data/sciencebase/obs.csv"
+  met_drivers_csv: "data/sciencebase/met_drivers.csv"
+  static_vars_csv: "data/sciencebase/static_vars.csv"
+  released_graph: "data/huggingface/hja_graph.gpickle"
+
+  drivers_parquet: "data/retrain/met_drivers.parquet"
+  graph_out: "data/retrain/hja_graph_drivers.gpickle"
+
+  # shared with config_consistph (read-only here)
+  split_map: "data/retrain/window_split_map_consistph.csv"
+  split_meta: "data/retrain/split_meta_consistph.json"
+  scaler_json: "data/retrain/feature_scaler_consistph.json"
+  feature_arrays: "data/retrain/feature_arrays_consistph.npz"
+
+  # no-lag variant outputs
+  checkpoint: "data/retrain/best_model_consistph_nolag.pt"
+  predictions_dir: "data/retrain/predictions_consistph_nolag"
+  eval_report: "results/rgcn_eval_consistph_nolag.md"
+  hjflp_report: "results/rgcn_eval_hjflp_consistph_nolag.md"
+
+windows:
+  date_start: "1980-01-02"
+  date_end: "2020-12-31"
+  seq_length: 30
+  forecast_horizon: 3
+  stride: 3
+
+split:
+  method: holdout_blocks
+  holdout_blocks:
+    - ["2020-07-18", "2020-07-29"]
+    - ["2020-09-10", "2020-09-21"]
+    - ["2020-10-10", "2020-10-21"]
+  guard_days: 7
+
+masking:
+  # Only MaxDepth remains observation-derived in the tail once lags are
+  # excluded; keep obs-masking so it is frozen at day t like the other variants.
+  forecast_mask: obs
+
+features:
+  exclude_time:
+    - "Discharge_CMS_lag_1"
+    - "Discharge_CMS_lag_7"
+    - "HoboWetDry0.05_lag_1"
+    - "HoboWetDry0.05_lag_7"
+
+model:
+  version: "v2"
+  hidden_dim: 64
+  dropout: 0.1
+  recur_dropout: 0.0
+  return_states: false
+
+training:
+  epochs: 100
+  batch_size: 128
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  grad_clip: 1.0
+  early_stopping_patience: 20
+  lambda_discharge: 1.0
+  lambda_wetdry: 0.5
+  false_positive_weight: 2.0
+  seed: 42

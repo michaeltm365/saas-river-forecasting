@@ -1,3 +1,10 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/hja"]
+
 [project]
 name = "saas-river-forecasting"
 version = "0.1.0"
@@ -8,9 +15,12 @@ dependencies = [
     "huggingface-hub>=1.17.0",
     "imbalanced-learn>=0.14.1",
     "matplotlib>=3.10.9",
+    "networkx>=3.6.1",
     "numpy>=2.4.6",
     "optuna>=4.8.0",
     "pandas>=3.0.3",
+    "pyarrow>=24.0.0",
+    "pyyaml>=6.0.3",
     "scikit-learn>=1.8.0",
     "scipy>=1.17.1",
     "seaborn>=0.13.2",
@@ -18,3 +28,16 @@ dependencies = [
     "torch-geometric>=2.7.0",
     "xgboost>=3.2.0",
 ]
+
+# Default PyPI torch wheels are built for CUDA 13 (+cu130) and won't run on
+# CUDA 12.x drivers (e.g. a 12.4 / 550-series driver). Pin torch to the CUDA
+# 12.6 build on Linux, which runs on 12.4+ drivers via CUDA minor-version
+# compatibility. Non-Linux platforms fall back to the default PyPI wheels
+# (macOS has no CUDA builds; training requires a Linux CUDA machine anyway).
+[[tool.uv.index]]
+name = "pytorch-cu126"
+url = "https://download.pytorch.org/whl/cu126"
+explicit = true
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-cu126", marker = "sys_platform == 'linux'" }]

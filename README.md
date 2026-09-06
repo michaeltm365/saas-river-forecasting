@@ -14,12 +14,17 @@ This repository contains the code and analysis for our research on machine learn
 ## Repository Structure
 
 ```
+├── src/hja/                         # Shared modeling library (installed with uv sync)
+│   ├── data.py                      #   central_df builders, feature selection, scaling
+│   ├── splits.py                    #   released splits (random/temporal/site) + flagship constants
+│   ├── evaluation.py, importance.py #   shared metrics + feature-importance presentation
+│   └── models/                      #   lr / xgb / lstm_hobo runners, each with a CLI
 ├── lr/
-│   └── lr.ipynb                     # Logistic Regression: training, evaluation, inference
+│   └── lr.ipynb                     # Logistic Regression: visualization/demo over hja.models.lr
 ├── xgb/
-│   └── xgb.ipynb                    # XGBoost: training, evaluation, inference
+│   └── xgb.ipynb                    # XGBoost: visualization/demo over hja.models.xgb
 ├── lstm/
-│   ├── lstm_hobo_sites.ipynb        # LSTM on HOBO sensor sites only (discrete observations)
+│   ├── lstm_hobo_sites.ipynb        # LSTM (HOBO sites only): visualization/demo over hja.models.lstm_hobo
 │   ├── lstm_all_sites.ipynb         # CANONICAL LSTM (all sites): q65 temporal split, ADASYN
 │   └── lstm_all_sites_results.md    # Mixed-data LSTM results (distributional mismatch finding)
 ├── rgcn/
@@ -41,6 +46,7 @@ This repository contains the code and analysis for our research on machine learn
 │   └── gam.ipynb                    # GAM-based synthetic data generation
 ├── results/
 │   ├── flagship/                    # CANONICAL results (FLAGSHIP_RESULTS.md + per-run reports)
+│   ├── baselines/                   # LR / XGBoost / LSTM-HOBO metrics from the hja CLIs
 │   ├── rgcn_eval_retrain*.md        # Earlier retrain metrics (per split variant)
 │   └── as_released_2026-06/         # Manifest of the archived released baseline (tag: results-as-released)
 ├── download_data.py                 # Fetch ScienceBase + Hugging Face data into data/
@@ -187,23 +193,35 @@ URL).
 
 ## Usage
 
-All notebooks follow a consistent structure and use standardized variable naming:
+All modeling logic lives in the shared `hja` package (`src/hja/`, installed
+editable by `uv sync`): data construction (`hja.data`), split strategies
+(`hja.splits`), training/evaluation runners (`hja.models`), and shared
+metrics/importance presentation (`hja.evaluation`, `hja.importance`). The
+notebooks under `lr/`, `xgb/`, and `lstm/` are **visualization/demo layers**
+over these functions — the notebooks and the command-line runners execute the
+identical code path, so they cannot drift apart.
 
-1. **Imports**
-2. **Data Preprocessing** — Loading, merging, and creating the `central_df` dataframe with standardized column names (`wetdry_status` for the current observation, `wet_dry_next` for the prediction target)
-3. **Model Training** — With ADASYN class imbalance handling
-4. **Evaluation** — Metrics, classification reports, confusion matrices, and feature importance
-5. **Inference** — Function for predicting wet/dry status at new site-date combinations
+Run the supervised baselines from the command line (each writes metrics to
+`results/baselines/`):
 
-Example inference (LR/XGBoost):
+```bash
+uv run python -m hja.models.lr         # Logistic Regression, all three released splits
+uv run python -m hja.models.xgb        # XGBoost, all three released splits
+uv run python -m hja.models.lstm_hobo  # LSTM on HOBO sites (random sequence split)
+```
+
+LR and XGBoost reproduce the released notebook numbers exactly (accuracy and
+F1 to 6 decimals). The LSTM-HOBO runner fixes a scaler leak in the released
+notebook (StandardScaler was fit before the train/test split; it is now fit on
+training sequences only), moving random-split accuracy from 0.967 to 0.970.
+ROC-AUC is always computed from predicted probabilities.
+
+Example inference (from the notebooks, using a trained runner result `r`):
 ```python
-predict_site_date(
-    model=model,
-    central_df=central_df,
-    site_id="HoboSite100",
-    date="2020-10-22"
-)
-# Output: "Site HoboSite100 on 2020-10-25 (predicted from 2020-10-22): DRY, (P(wet)=0.0000)"
+from hja.models import lr
+lr.predict_site_date(r["model"], r["scaler"], frame, r["features"],
+                     site_id="HoboSite100", date="2020-10-22")
+# "Site HoboSite100 on 2020-10-25 (predicted from 2020-10-22): DRY, (P(wet)=0.0000)"
 ```
 
 ## Citation

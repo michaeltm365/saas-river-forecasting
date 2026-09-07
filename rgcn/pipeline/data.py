@@ -48,8 +48,15 @@ def load_drivers(config) -> pd.DataFrame:
 
 
 def load_obs(config, impute_dry: bool = True) -> pd.DataFrame:
-    """Load obs.csv. Optionally impute HoboWetDry0.05 = dry where discharge is
-    near-zero (released behavior)."""
+    """Load obs.csv, imputing HoboWetDry0.05 from discharge per
+    ``imputation.wetdry`` in the config:
+
+    - "dry" (default, released/retrain behavior): discharge <= DRY_THRESHOLD
+      sets the label to 0 (dry).
+    - "two_sided": additionally fills 1 (wet) where discharge > DRY_THRESHOLD
+      and no real HOBO label exists (fillna semantics on the wet side,
+      matching the LSTM all-sites frame's wetdry_status).
+    """
     cols = [
         "NHDPlusID", "Date", "Discharge_CMS", "HoboWetDry0.05",
         "MaxDepth_cm", "MaxDepth_Threshold", "MaxDepth_Censor",
@@ -57,8 +64,18 @@ def load_obs(config, impute_dry: bool = True) -> pd.DataFrame:
     df = pd.read_csv(config.path("obs_csv"), usecols=cols)
     df["Date"] = pd.to_datetime(df["Date"])
     if impute_dry:
+        mode = (config.get("imputation") or {}).get("wetdry", "dry")
         dry = df["Discharge_CMS"].notna() & (df["Discharge_CMS"] <= DRY_THRESHOLD)
         df.loc[dry, "HoboWetDry0.05"] = 0.0
+        if mode == "two_sided":
+            wet = (df["Discharge_CMS"].notna()
+                   & (df["Discharge_CMS"] > DRY_THRESHOLD)
+                   & df["HoboWetDry0.05"].isna())
+            df.loc[wet, "HoboWetDry0.05"] = 1.0
+            print(f"Imputation two_sided: +{int(dry.sum()):,} dry / "
+                  f"+{int(wet.sum()):,} wet labels from discharge")
+        elif mode != "dry":
+            raise ValueError(f"imputation.wetdry: unknown mode {mode!r}")
     return df
 
 

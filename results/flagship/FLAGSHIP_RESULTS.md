@@ -69,6 +69,21 @@ Secondary splits (diagnostic; stride-3 pooled eval reports,
 0.757 (d3); q65 0.938 (d1) → 0.396 (d3) — the honest "no weather forecast"
 floor.
 
+## 3b. Label-imputation diagnostic: two-sided retrain (2026-09-07)
+
+The released RGCN's label file was effectively two-sided (discharge >
+threshold → wet as well as ≤ → dry); the retrain has been dry-only since
+2026-07-01. A two-sided q65 retrain (`config_q65_2s*`, seeds 42/43/44;
+details `rgcn_q65_twosided.md`) shows the one-sided choice is right: on the
+identical 908 real-HOBO rows, two-sided gives 0.957 ± 0.003 Acc / 0.971 AUC
+with dry P/R 0.912/0.880 — trading dry recall (0.951 → 0.880) for precision
+against the canonical model, the wrong direction for the paper's declared
+dry-recall focus, and its dry precision of 0.912 exactly reproduces the
+released paper's dry-precision figure (evidence the released
+high-precision/low-recall dry profile came from the label diet, not the
+architecture). Imputed-row metrics restate thresholded-discharge skill.
+Diagnostic only; canonical remains one-sided.
+
 ## 4. Spatial transfer (with-sensor site holdout, flag_sh)
 
 Held-out 5 reaches, pooled over the labeled season, all horizons
@@ -126,7 +141,19 @@ analysis lives on the `rgcn-retrain` branch
 (`results/flagship/persistence_baseline.md` and the full sections 6–7
 there).
 
-## 8. Ablations + hyperparameter sensitivity (flagship, ph, seed 42)
+## 8. Ablations + hyperparameter sensitivity (canonical: q65, Day-3, seed 42)
+
+**Canonical sweep (2026-09-07): `rgcn_ablation_sweep_q65.md`** — same 15
+one-factor ablations rerun on the q65 split, Day-3-only classification
+(N=314). Conclusions replicate the ph sweep: all hyperparameter rows within
+single-seed noise (0.939–0.968 vs the default's weak seed-42 draw 0.943);
+fpw dry-recall dial 0.870/0.870/0.948; classification-only 0.965 ≈ default;
+regression-only NSE d3 0.418 ≥ 0.396; no-statics within noise on BOTH tasks
+(0.968 acc, NSE d3 0.423 — the ph sweep's small discharge cost does not
+replicate at q65's low d3 NSE). The ph sweep below is retained as the
+replicate.
+
+### 8b. Original ph sweep (replicate; pooled horizons, seed 42)
 
 `results/flagship/rgcn_ablation_sweep.md`, 16 rows. Noise band ±0.02
 (multi-seed flagship 0.963 ± 0.005):

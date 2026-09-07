@@ -1,0 +1,53 @@
+# Two-sided imputation variant of the flagship q65 config: wet
+# labels also imputed where discharge > 0.00014 (fillna semantics,
+# matching the LSTM all-sites frame). Split/window grid identical
+# to flagq65 (cutoff anchored to real HOBO label dates only).
+paths:
+  obs_csv: data/sciencebase/obs.csv
+  met_drivers_csv: data/sciencebase/met_drivers.csv
+  static_vars_csv: data/sciencebase/static_vars.csv
+  released_graph: data/huggingface/hja_graph.gpickle
+  drivers_parquet: data/retrain/met_drivers.parquet
+  graph_out: data/retrain/hja_graph_drivers.gpickle
+  split_map: data/retrain/flagship/window_split_map_flagq652s.csv
+  split_meta: data/retrain/flagship/split_meta_flagq652s.json
+  scaler_json: data/retrain/flagship/feature_scaler_flagq652s.json
+  feature_arrays: data/retrain/flagship/feature_arrays_flagq652s.npz
+  checkpoint: data/retrain/flagship/best_model_flag_q65_2s.pt
+  predictions_dir: data/retrain/flagship/predictions_flag_q65_2s
+  eval_report: results/flagship/rgcn_eval_flag_q65_2s.md
+  hjflp_report: results/flagship/rgcn_eval_hjflp_flag_q65_2s.md
+windows:
+  date_start: '1980-01-02'
+  date_end: '2020-12-31'
+  seq_length: 30
+  forecast_horizon: 3
+  stride: 3
+split:
+  method: quantile_cutoff
+  wetdry_quantile: 0.65
+masking:
+  forecast_mask: obs+drivers
+features:
+  exclude_time:
+  - Discharge_CMS_lag_7
+  - HoboWetDry0.05_lag_7
+model:
+  version: v2
+  hidden_dim: 64
+  dropout: 0.1
+  recur_dropout: 0.0
+  return_states: false
+training:
+  epochs: 100
+  batch_size: 128
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  grad_clip: 1.0
+  early_stopping_patience: 20
+  lambda_discharge: 1.0
+  lambda_wetdry: 0.5
+  false_positive_weight: 2.0
+  seed: 42
+imputation:
+  wetdry: two_sided

@@ -1,0 +1,24 @@
+# Flagship RGCN — loss-function ablations + hyperparameter sensitivity
+
+Flagship protocol: q65 temporal split with TWO-SIDED label imputation (imputation.wetdry: two_sided); classification at the Day-3 horizon only (650 stride-3 val labels, ~2/3 discharge-imputed wets), A-strict masking (obs+drivers tail frozen), no lag-7 features, 30-day windows, seed 42, patience-20 early stopping. One factor changed per row. Single-seed noise on Acc is ~±0.02 at N=650 (multi-seed 2s default, daily grid: 0.951 ± 0.005); differences inside that band demonstrate robustness, not superiority. Discharge in linear CMS. Val loss is not comparable across λ rows.
+
+| Configuration | Best ep | Val loss | Acc | ROC-AUC | F1 | Dry recall | NSE d1 | NSE d3 | KGE d3 |
+|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|
+| default (λ 1.0/0.5, fpw 2, h64, lr 1e-3, do 0.1, wd 1e-4) | 29 | 0.171 | 0.952 | 0.952 | 0.973 | 0.766 | 0.839 | 0.364 | 0.354 |
+| λ_reg 0.5 / λ_cls 1.0 | 29 | 0.205 | 0.958 | 0.958 | 0.976 | 0.818 | 0.804 | 0.354 | 0.340 |
+| λ_reg 1.0 / λ_cls 1.0 | 29 | 0.255 | 0.951 | 0.953 | 0.972 | 0.766 | 0.847 | 0.353 | 0.345 |
+| discharge-only (λ_cls 0) | 62 | 0.076 | 0.882 | 0.500 | 0.937 | 0.000 | 0.950 | 0.428 | 0.373 |
+| wet/dry-only (λ_reg 0) | 47 | 0.074 | 0.960 | 0.972 | 0.977 | 0.831 | -0.047 | -0.042 | -0.726 |
+| fpw 1 (unweighted BCE) | 55 | 0.130 | 0.954 | 0.969 | 0.974 | 0.740 | 0.903 | 0.394 | 0.360 |
+| fpw 4 | 29 | 0.215 | 0.951 | 0.950 | 0.972 | 0.844 | 0.824 | 0.370 | 0.330 |
+| hidden 32 | 55 | 0.166 | 0.948 | 0.961 | 0.971 | 0.727 | 0.848 | 0.390 | 0.396 |
+| hidden 128 | 47 | 0.146 | 0.957 | 0.980 | 0.976 | 0.805 | 0.900 | 0.377 | 0.313 |
+| lr 3e-4 | 56 | 0.199 | 0.948 | 0.924 | 0.971 | 0.701 | 0.833 | 0.338 | 0.391 |
+| lr 3e-3 | 17 | 0.156 | 0.952 | 0.961 | 0.973 | 0.805 | 0.870 | 0.410 | 0.363 |
+| dropout 0.0 | 44 | 0.150 | 0.954 | 0.971 | 0.974 | 0.792 | 0.955 | 0.337 | 0.500 |
+| dropout 0.3 | 20 | 0.218 | 0.946 | 0.917 | 0.970 | 0.688 | 0.706 | 0.345 | 0.248 |
+| weight_decay 0 | 29 | 0.181 | 0.955 | 0.944 | 0.975 | 0.766 | 0.841 | 0.364 | 0.330 |
+| weight_decay 1e-3 | 59 | 0.158 | 0.954 | 0.967 | 0.974 | 0.792 | 0.881 | 0.364 | 0.402 |
+| no static features | 54 | 0.156 | 0.951 | 0.970 | 0.972 | 0.753 | 0.855 | 0.387 | 0.357 |
+
+Notes: 'wet/dry-only' trains with no discharge loss (its NSE columns test whether the untrained regression head still tracks flow); 'discharge-only' vice versa (classification columns expected near-chance). fpw = dry-class BCE up-weight. 'no static features' drops all 17 NHDPlus watershed vars (input_dim 35 -> 18).

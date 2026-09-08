@@ -39,22 +39,30 @@ DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 import os  # noqa: E402
 
 FAMILY = os.environ.get("ABL_FAMILY", "ph")
-assert FAMILY in ("ph", "q65"), FAMILY
-ABL_DIR = ("rgcn/flagship/ablations" if FAMILY == "ph"
-           else "rgcn/flagship/ablations_q65")
-DEFAULT_CFG = ("rgcn/flagship/config_ph.yml" if FAMILY == "ph"
-               else "rgcn/flagship/config_q65.yml")
-OUT_NAME = ("rgcn_ablation_sweep.md" if FAMILY == "ph"
-            else "rgcn_ablation_sweep_q65.md")
-SPLIT_DESC = ("phases split rebuilt with guard_days=3 (784 val wet/dry "
-              "labels), classification pooled over horizons 1-3"
-              if FAMILY == "ph" else
-              "q65 temporal split, cutoff 2020-09-10; classification at the "
-              "Day-3 horizon only (canonical convention; 314 stride-3 val "
-              "labels)")
-NOISE_DESC = ("~±0.02 (multi-seed flagship: 0.963 ± 0.005)" if FAMILY == "ph"
-              else "~±0.02-0.03 at N=314 (multi-seed flagship q65 Day-3: "
-              "0.962 ± 0.013)")
+assert FAMILY in ("ph", "q65", "q65_2s"), FAMILY
+ABL_DIR = {"ph": "rgcn/flagship/ablations",
+           "q65": "rgcn/flagship/ablations_q65",
+           "q65_2s": "rgcn/flagship/ablations_q65_2s"}[FAMILY]
+DEFAULT_CFG = {"ph": "rgcn/flagship/config_ph.yml",
+               "q65": "rgcn/flagship/config_q65.yml",
+               "q65_2s": "rgcn/flagship/config_q65_2s.yml"}[FAMILY]
+OUT_NAME = {"ph": "rgcn_ablation_sweep.md",
+            "q65": "rgcn_ablation_sweep_q65.md",
+            "q65_2s": "rgcn_ablation_sweep_q65_2s.md"}[FAMILY]
+SPLIT_DESC = {"ph": "phases split rebuilt with guard_days=3 (784 val wet/dry "
+              "labels), classification pooled over horizons 1-3",
+              "q65": "q65 temporal split, cutoff 2020-09-10; classification at "
+              "the Day-3 horizon only (canonical convention; 314 stride-3 val "
+              "labels)",
+              "q65_2s": "q65 temporal split with TWO-SIDED label imputation "
+              "(imputation.wetdry: two_sided); classification at the Day-3 "
+              "horizon only (650 stride-3 val labels, ~2/3 discharge-imputed "
+              "wets)"}[FAMILY]
+NOISE_DESC = {"ph": "~±0.02 (multi-seed flagship: 0.963 ± 0.005)",
+              "q65": "~±0.02-0.03 at N=314 (multi-seed flagship q65 Day-3: "
+              "0.962 ± 0.013)",
+              "q65_2s": "~±0.02 at N=650 (multi-seed 2s default, daily grid: "
+              "0.951 ± 0.005)"}[FAMILY]
 
 _ABL = [
     ("λ_reg 0.5 / λ_cls 1.0", "config_l05c10.yml"),
@@ -120,7 +128,7 @@ def eval_ckpt(config_path):
 
     # Canonical reporting (q65 family): Day-3 classification only; the ph
     # family keeps its original pooled-horizon columns.
-    cls_horizons = [3] if FAMILY == "q65" else list(range(1, 4))
+    cls_horizons = [3] if FAMILY in ("q65", "q65_2s") else list(range(1, 4))
     cls_y, cls_p = [], []
     disch = {1: ([], []), 3: ([], [])}
     for wid in val_ids:

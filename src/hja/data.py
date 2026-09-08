@@ -89,8 +89,18 @@ def build_hobo_frame(include_order: bool = True) -> pd.DataFrame:
     return df.reset_index(drop=True)
 
 
-def build_allsites_frame() -> pd.DataFrame:
-    """HOBO + discretized-discharge frame (mirrors lstm_all_sites cells 6-7)."""
+def build_allsites_frame(labels: str = "two_sided") -> pd.DataFrame:
+    """HOBO + discretized-discharge frame (mirrors lstm_all_sites cells 6-7).
+
+    labels="two_sided" (default, released LSTM-all protocol): wetdry_status
+    falls back to thresholded discharge in both directions; rows without a
+    3-day-ahead target are dropped.
+    labels="dry_only": the RGCN's one-sided label diet — status is HOBO where
+    present, imputed dry where discharge <= DRY_THRESHOLD, otherwise NaN (no
+    label). Rows are KEPT with NaN targets so the daily row cadence (and
+    hence LSTM sequence construction) is unchanged; callers must mask
+    unlabeled targets, mirroring the RGCN's masked loss.
+    """
     obs = pd.read_csv(SCIENCEBASE / "obs.csv")
     obs["Date"] = pd.to_datetime(obs["Date"])
     obs_wide = (obs.drop(columns="SiteIDCode", errors="ignore")
@@ -104,7 +114,15 @@ def build_allsites_frame() -> pd.DataFrame:
 
     df["is_hobo"] = df["HoboWetDry0.05"].notna().astype(int)
     df["wetdry_discharge"] = (df["Discharge_CMS"] >= DRY_THRESHOLD).astype(int)
-    df["wetdry_status"] = df["HoboWetDry0.05"].fillna(df["wetdry_discharge"])
+    if labels == "two_sided":
+        df["wetdry_status"] = df["HoboWetDry0.05"].fillna(df["wetdry_discharge"])
+    elif labels == "dry_only":
+        df["wetdry_status"] = df["HoboWetDry0.05"]
+        imput_dry = (df["HoboWetDry0.05"].isna() & df["Discharge_CMS"].notna()
+                     & (df["Discharge_CMS"] <= DRY_THRESHOLD))
+        df.loc[imput_dry, "wetdry_status"] = 0.0
+    else:
+        raise ValueError(f"labels: unknown mode {labels!r}")
     df = df[df["HoboWetDry0.05"].notna() | df["Discharge_CMS"].notna()]
 
     df = df.sort_values(["NHDPlusID", "Date"])
@@ -115,7 +133,8 @@ def build_allsites_frame() -> pd.DataFrame:
     df[OBS_EXTRA_COLS] = df[OBS_EXTRA_COLS].fillna(0)
 
     df["wet_dry_next"] = df.groupby("NHDPlusID")["wetdry_status"].shift(-3)
-    df = df.dropna(subset=["wet_dry_next"])
+    if labels == "two_sided":
+        df = df.dropna(subset=["wet_dry_next"])
     df = df.drop(columns=["wetdry_discharge", "FromNode", "ToNode",
                           "Flow_Status", "HoboWetDry0.05", "Discharge_CMS"],
                  errors="ignore")

@@ -25,7 +25,7 @@ This repository contains the code and analysis for our research on machine learn
 │   └── xgb.ipynb                    # XGBoost: visualization/demo over hja.models.xgb
 ├── lstm/
 │   ├── lstm_hobo_sites.ipynb        # LSTM (HOBO sites only): visualization/demo over hja.models.lstm_hobo
-│   ├── lstm_all_sites.ipynb         # CANONICAL LSTM (all sites): q65 temporal split, ADASYN
+│   ├── lstm_all_sites.ipynb         # CANONICAL LSTM (all sites): q65 split, one-sided labels, no resampling
 │   └── lstm_all_sites_results.md    # Mixed-data LSTM results (distributional mismatch finding)
 ├── rgcn/
 │   ├── pipeline/                    # Reproducible RGCN training pipeline — see rgcn/pipeline/README.md
@@ -64,20 +64,23 @@ This repository contains the code and analysis for our research on machine learn
 ## Canonical results and how to reproduce them
 
 The paper's canonical neural models are the **flagship RGCN** and the
-**LSTM (all sites, ADASYN)**, both evaluated on the **q65 temporal split**
+**LSTM (all sites)** — both trained on the same one-sided label diet (real
+HOBO labels + discharge-imputed drys; above-threshold gauge days are
+unlabeled) and evaluated on the **q65 temporal split**
 (cutoff 2020-09-10, the 0.65 quantile of wet/dry label dates; training strictly
 precedes validation, so no validation-period date appears in any training
 input). The flagship RGCN uses 30-day windows, 35 input features (incl. 17
 static watershed features, no 7-day lags), and strict forecast-tail masking
 (lagged observations, max-depth, AND meteorological drivers frozen at day *t*
 for the t+1..t+3 tail — no post-issue-day information). Headline numbers
-(seeds 42/43/44; RGCN = Day-3 forecasts on the daily validation grid):
+(seeds 42/43/44; Day-3 forecasts on the daily validation grid, evaluated on
+sensor-verified labels):
 
 | Model | N (val) | Accuracy | ROC-AUC | F1 |
 |---|--:|--:|--:|--:|
-| RGCN (flagship, q65, t+3) | 945 | 0.960 ± 0.010 | 0.982 ± 0.001 | 0.974 ± 0.007 |
-| LSTM (all sites, q65) | 10,512 | 0.951 ± 0.008 | 0.870 ± 0.041 | 0.974 ± 0.004 |
-| Persistence baseline | 945 | 0.962 | — | 0.975 |
+| RGCN (flagship, q65, t+3) | 908 | 0.962 ± 0.011 | 0.986 ± 0.002 | 0.976 ± 0.007 |
+| LSTM (all sites, one-sided, t+3) | 956 | 0.955 ± 0.012 | 0.980 ± 0.003 | 0.971 ± 0.008 |
+| Persistence baseline | 908 | 0.966 | — | 0.978 |
 
 The full campaign (all four splits, held-out-site transfer, ablations,
 persistence, matched cross-model comparison, copula) is consolidated in
@@ -103,9 +106,10 @@ uv run python -m rgcn.pipeline.eval_report        # -> results/flagship/rgcn_eva
 CUDA_VISIBLE_DEVICES=0 uv run python -m rgcn.pipeline.export_predictions \
   --eval-stride 1 --day3-range "2020-09-11:2020-12-31"
 
-# 3) Canonical LSTM (all sites): all four flagship splits x seeds 42/43/44
-#    (canonical rows = q65) -> results/flagship/lstm_all/
-CUDA_VISIBLE_DEVICES=0 uv run python benchmarks/lstm_flagship_splits.py
+# 3) Canonical LSTM (all sites): one-sided label diet, no resampling; all
+#    four flagship splits x seeds 42/43/44 (canonical rows = q65) ->
+#    results/flagship/lstm_all/*_1s.*
+CUDA_VISIBLE_DEVICES=0 uv run python benchmarks/lstm_flagship_splits.py --labels dry_only
 
 # 4) Persistence baseline + matched cross-model tables; copula on all splits
 uv run python benchmarks/flagship_analysis.py

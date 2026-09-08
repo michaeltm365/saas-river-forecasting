@@ -85,13 +85,14 @@ def assign_split(split: str, tdates: pd.DatetimeIndex, sites: np.ndarray):
     return out
 
 
-def prepare_frame() -> tuple[pd.DataFrame, list[str]]:
+def prepare_frame(labels: str = "two_sided") -> tuple[pd.DataFrame, list[str]]:
     """Released all-sites frame + per-row target dates / label sources.
 
     Shared by main() and lstm/lstm_all_sites.ipynb so the notebook runs the
-    exact canonical preprocessing.
+    exact canonical preprocessing. labels="dry_only" builds the RGCN's
+    one-sided label diet (rows kept, unlabeled targets NaN — callers mask).
     """
-    dfa = build_central_df_allsites()
+    dfa = build_central_df_allsites(labels=labels)
     # Label dates: wet_dry_next is a 3-ROW shift within site (released
     # protocol); recover each label's actual date the same way. Rows dropped
     # by the trailing dropna leave the positional shift intact, so only the
@@ -134,7 +135,8 @@ def train_eval(split: str, seed: int, dfa: pd.DataFrame, feats: list[str],
 
     X, y, sites, tdates, hobo = make_sequences_dated(dfs, feats)
     grp = assign_split(split, tdates, sites)
-    tr, va = grp == "train", grp == "val"
+    lab_ok = ~np.isnan(y.astype(float))  # mask unlabeled targets (dry_only diet)
+    tr, va = (grp == "train") & lab_ok, (grp == "val") & lab_ok
     print(f"[{split} s{seed}] sequences: {tr.sum():,} train / {va.sum():,} val "
           f"/ {(grp == 'drop').sum():,} buffer")
 
@@ -214,15 +216,23 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--no-adasyn", action="store_true",
                     help="Skip ADASYN resampling (train on raw sequences).")
+    ap.add_argument("--labels", choices=["two_sided", "dry_only"],
+                    default="two_sided",
+                    help="Label diet. dry_only = the CANONICAL one-sided "
+                         "diet (implies no resampling; writes *_1s outputs).")
     args = ap.parse_args()
     use_adasyn = not args.no_adasyn
-    suffix = "" if use_adasyn else "_noad"
+    if args.labels == "dry_only":
+        use_adasyn = False  # canonical: no resampling (training is ~77% dry)
+        suffix = "_1s"
+    else:
+        suffix = "" if use_adasyn else "_noad"
 
     OUT.mkdir(parents=True, exist_ok=True)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     print(f"Device: {device} | ADASYN={'on' if use_adasyn else 'OFF'}")
 
-    dfa, feats = prepare_frame()
+    dfa, feats = prepare_frame(labels=args.labels)
 
     summary = {}
     for split in ("ph", "q65", "q80", "site"):

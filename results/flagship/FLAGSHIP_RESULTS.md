@@ -39,29 +39,27 @@ training window with any val-period date in its inputs (structurally clean on
 the train-sees-val channel); ph retains a small residual (post-block training
 windows include block dates among input days) documented for §2.4.
 
-## 3. RGCN headline numbers (canonical: Day-3 forecasts, daily val grid)
+## 3. RGCN headline numbers (canonical: Day-3, daily grid, sensor-verified)
 
-**Canonical reporting (adopted 2026-09-06): Day-3 (t+3) predictions on the
-stride-1 daily validation grid — no pooled-horizon numbers.** q65, seeds
-42/43/44 (per-seed Acc 0.946 / 0.967 / 0.968), from
-`predictions_flag_q65*_stride1/` day-3 exports:
+**Canonical reporting (updated 2026-09-08): Day-3 (t+3) predictions on the
+stride-1 daily validation grid, evaluated on SENSOR-VERIFIED labels only —
+discharge-imputed validation labels are threshold-agreement diagnostics,
+never headline metrics. No pooled-horizon numbers.** q65, seeds 42/43/44:
 
-| Scope | N | Acc | AUC | Wet F1 |
-|---|--:|--:|--:|--:|
-| All | 945 | **0.960 ± 0.010** | 0.982 ± 0.001 | 0.974 ± 0.007 |
-| Headwater (≤2) | 780 | 0.957 ± 0.013 | 0.981 ± 0.001 | 0.971 ± 0.008 |
-| Tailwater (≥3) | 165 | 0.978 ± 0.003 | 0.995 ± 0.003 | 0.986 ± 0.002 |
-| HOBO only | 908 | 0.962 ± 0.011 | 0.986 ± 0.002 | 0.976 ± 0.007 |
+| Scope | N | Acc | AUC | Wet F1 | Dry P/R/F1 |
+|---|--:|--:|--:|--:|---|
+| Sensor-verified (CANONICAL) | 908 | **0.962 ± 0.011** | 0.986 ± 0.002 | 0.976 ± 0.007 | 0.878/0.951/0.912 |
+| — headwater (≤2) | 743 | 0.959 ± 0.014 | 0.984 ± 0.002 | 0.974 ± 0.008 | — |
+| — tailwater (≥3) | 165 | 0.978 ± 0.003 | 0.995 ± 0.003 | 0.986 ± 0.002 | — |
+| Discharge-imputed (diagnostic) | 37 | 0.919 ± 0.000 | undefined (dry-only) | — | — |
 
-Per-class (all rows): dry P/R/F1 0.895 / 0.945 / 0.919; wet 0.983 / 0.965 /
-0.974. Convention robustness: pooled stride-3 (N=968, old headline
-0.962 ± 0.009) and Day-3 stride-3 (N=314, 0.962 ± 0.013) agree with the
-canonical numbers to ~0.002 everywhere — the horizon profile is flat, so
-the choice is presentational. Adjacent-day rows are autocorrelated (ρ up
-to 1.0), so per-row N overstates effective sample size; seed spread is the
-uncertainty device. Paper Table 3 is two-panel: (a) full validation sets,
-(b) the 928-row intersection with the LSTM validation set (RGCN
-0.961 ± 0.010 there; §6).
+Convention robustness: the all-rows daily grid (N=945: 0.960 ± 0.010),
+pooled stride-3 (N=968: 0.962 ± 0.009), and Day-3 stride-3 (N=314:
+0.962 ± 0.013) all agree within ~0.003. Adjacent-day rows are
+autocorrelated, so seed spread is the uncertainty device, never per-row
+SEs. Paper Table 3 is two-panel: (a) each model's full sensor-verified set
+(LSTM N=956, incl. 48 sensor rows outside the RGCN's network), (b) the
+shared 908 rows.
 
 Secondary splits (diagnostic; stride-3 pooled eval reports,
 `results/flagship/rgcn_eval_flag_*.md`): ph 0.963 ± 0.005, q80
@@ -100,22 +98,34 @@ Transfer to spatially new reaches with an observation stream holds
 (weakest site: 100137, the 68%-dry reach). Seed variance is larger here than
 on temporal splits.
 
-## 5. LSTM (all sites) on the same splits
+## 5. LSTM (all sites) — canonical: one-sided label diet, no resampling
 
-`benchmarks/lstm_flagship_splits.py` — released Optuna hyperparams, splits
-assigned by sequence target date (same blocks/guards/cutoffs); site split
-drops the 5 reaches from training (same with-sensor regime). Two variants:
-released protocol (ADASYN, train-only) and no-ADASYN.
-(`results/flagship/lstm_all/lstm_summary{,_noad}.md`)
+**Canonical (2026-09-08): the LSTM trains on the SAME one-sided (dry_only)
+label diet as the RGCN, with NO resampling** (the one-sided training
+labels are ~77% dry — 2,322 wet / 7,675 dry — so minority oversampling
+would target the wet class). Runs:
+`benchmarks/lstm_flagship_splits.py --labels dry_only` → `*_1s` outputs,
+seeds 42/43/44; notebook: `lstm/lstm_all_sites.ipynb`.
 
-Key finding: **no-ADASYN is better nearly everywhere on the mixed all-sites
-diet** — ph all-rows 0.934 ± 0.009 vs 0.908 ± 0.007, with better dry F1
-(0.770 vs 0.718) and better q65 AUC (0.938 vs 0.870); only the site split
-favors ADASYN (0.959 vs 0.938). The discretized-dry supply appears to make
-synthetic oversampling unnecessary-to-harmful; a §2.2.5 protocol note is
-needed whichever variant becomes the headline row.
+| Scope | N | Acc | AUC | Wet F1 | Dry P/R/F1 |
+|---|--:|--:|--:|--:|---|
+| Sensor-verified (CANONICAL) | 956 | **0.955 ± 0.012** | 0.980 ± 0.003 | 0.971 ± 0.008 | 0.835/0.968/0.895 |
+| — headwater (≤2) | 743 | 0.953 ± 0.016 | 0.977 ± 0.004 | 0.969 ± 0.011 | — |
+| — tailwater (≥3) | 165 | 0.949 ± 0.020 | 0.984 ± 0.002 | 0.968 ± 0.013 | — |
+| Discharge-imputed (diagnostic) | 652 | 0.590 ± 0.112 | undefined (dry-only) | — | — |
+
+The imputed-row diagnostic is weak because the LSTM has no
+discharge-magnitude input (see `diet_panels.md`); it does not affect
+canonical metrics. Superseded and retained as diagnostics: the two-sided
+ADASYN and no-ADASYN variants (`lstm_summary{,_noad}.md`, `metrics_q65_s*`
+without `_1s`); the panels motivating the switch are in `diet_panels.md`.
 
 ## 6. Matched-set head-to-head at t+3 (the clean comparison table)
+
+> **Superseded note (2026-09-08):** this table was built on the two-sided
+> ADASYN/no-ADASYN LSTM variants. The canonical cross-model panel is now
+> Table 3(b): the shared sensor-verified rows (N=908), RGCN 0.962 ± 0.011
+> vs LSTM (one-sided) 0.952 ± 0.012. Retained as a diagnostic.
 
 Identical (reach, date) rows for all models: inner join of RGCN stride-1
 day-3 export and LSTM predictions, seeds paired; persistence uses only the
@@ -227,8 +237,9 @@ mean 146.7 — an ungauged-product success).
 6. §3.6: canonical q65 copula = Platt + ρ-clip on all 22 HOBO val reaches,
    18/22 (82%) coverage; report raw 6/22 as the motivating comparison and
    the two intermittent under-predictions as residual limitation.
-7. LSTM tables: decide ADASYN (released protocol) vs no-ADASYN (better,
-   deviation) headline; matched-set table (§6) as the cross-model anchor.
+7. RESOLVED (2026-09-08): canonical LSTM = one-sided label diet, no
+   resampling (§5); canonical evaluation universe = sensor-verified rows;
+   cross-model anchor = Table 3(b) shared sensor-verified rows.
 
 ## 11. Artifact index
 

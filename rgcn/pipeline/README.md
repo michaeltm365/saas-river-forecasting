@@ -128,6 +128,9 @@ rgcn/pipeline/
 ```
 
 Config extensions (see the `config_consist*.yml` variants):
+`imputation.wetdry: dry` (default; the canonical one-sided discharge→dry
+imputation) or `two_sided` (diagnostic; also imputes wet where discharge
+exceeds the threshold — see `results/flagship/rgcn_q65_twosided.md`).
 `masking.forecast_mask: none|obs|obs+drivers` controls forecast-tail input
 masking, and `features.exclude_time: [...]` drops time-varying features for
 ablations (e.g. the no-lag spatial-transfer variant,

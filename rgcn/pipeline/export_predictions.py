@@ -24,6 +24,7 @@ import pandas as pd
 import torch
 
 from . import features as F
+from . import availability
 from .config import load_config
 from .data import load_arrays
 from .masking import mask_forecast_tail, mask_mode
@@ -55,6 +56,10 @@ def main() -> int:
     X_time = torch.from_numpy(arr["X_time"]).to(device)
     X_static = torch.from_numpy(arr["X_static"]).to(device)
     y_all = arr["y_all"]  # keep on CPU for true-label lookup
+    if availability.enabled(config):
+        wetdry = torch.from_numpy(y_all[..., F.WETDRY_IDX]).to(device)
+        X_time = availability.append_channel(X_time, wetdry)
+        del wetdry
     node_ids = arr["node_ids"]
     N = X_static.shape[0]
     static_b = X_static.unsqueeze(0)
@@ -107,9 +112,11 @@ def main() -> int:
     if exclude_static:
         X_static = X_static[:, :0]
         static_b = X_static.unsqueeze(0)
-    keep_time_cols, feature_vars = F.time_feature_selection(exclude_time)
+    keep_time_cols, feature_vars = availability.selection(exclude_time, availability.enabled(config))
     if exclude_static:
         feature_vars = [v for v in feature_vars if v not in F.STATIC_FEATURE_SET]
+    if feature_vars != ckpt.get("feature_vars"):
+        raise RuntimeError("Feature names/order differ between config and checkpoint")
     input_dim = len(feature_vars)
     keep_idx = (torch.tensor(keep_time_cols, device=device)
                 if exclude_time else None)
@@ -132,7 +139,9 @@ def main() -> int:
     for wid in win_ids:
         start, end = windows[wid]
         # clone: X_time[start:end] is a view and masking writes in place
-        xt = mask_forecast_tail(X_time[start:end].clone(), seq_len, forecast_mask)
+        xt = mask_forecast_tail(
+            X_time[start:end].clone(), seq_len, forecast_mask,
+            F.N_TIME_FEATURES if availability.enabled(config) else None)
         if keep_idx is not None:
             xt = xt[..., keep_idx]
         xs = static_b.expand(xt.shape[0], N, X_static.shape[1])

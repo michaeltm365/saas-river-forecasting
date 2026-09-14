@@ -19,6 +19,7 @@ import numpy as np
 import torch
 
 from . import features as F
+from . import availability
 from .config import load_config
 from .data import load_arrays
 from .dataset import load_split_indices
@@ -71,7 +72,9 @@ def run_epoch(model, windows, batch_ids, X_time, X_static, y_all, spec, cfg_tr,
             t_idx = starts[:, None] + arange_wl[None, :]     # (B, wl)
             xt = X_time[t_idx]                               # (B, wl, N, 20)
             # Mask first (fixed column indices), then subset for ablations.
-            xt = mask_forecast_tail(xt, spec.seq_length, forecast_mask)
+            xt = mask_forecast_tail(
+                xt, spec.seq_length, forecast_mask,
+                F.N_TIME_FEATURES if X_time.shape[-1] == F.N_TIME_FEATURES + 1 else None)
             if keep_time_cols is not None:
                 xt = xt[..., keep_time_cols]
             xs = X_static[None, None].expand(B, wl, N, X_static.shape[1])
@@ -122,6 +125,8 @@ def main() -> int:
     node_ids = arr["node_ids"].tolist()
     T, N, _ = X_time.shape
     assert X_time.shape[2] + X_static.shape[1] == F.INPUT_DIM
+    if availability.enabled(config):
+        X_time = availability.append_channel(X_time, y_all[..., F.WETDRY_IDX])
 
     # Feature ablation: drop the 17 static watershed vars entirely (model sees
     # only the time-varying block). Verified against the checkpoint at export.
@@ -164,7 +169,7 @@ def main() -> int:
 
     # Feature ablation (e.g. no-lag variant): subset time-varying columns.
     exclude_time = (config.get("features") or {}).get("exclude_time") or []
-    keep_time_cols, feature_vars = F.time_feature_selection(exclude_time)
+    keep_time_cols, feature_vars = availability.selection(exclude_time, availability.enabled(config))
     if exclude_static:
         feature_vars = [v for v in feature_vars if v not in F.STATIC_FEATURE_SET]
     input_dim = len(feature_vars)

@@ -10,7 +10,7 @@ import yaml
 
 # rgcn/pipeline/config.py -> repo root is two parents up from the package dir.
 REPO_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_CONFIG = REPO_ROOT / "rgcn" / "config.yml"
+DEFAULT_CONFIG = REPO_ROOT / "rgcn" / "configs" / "seed42.yml"
 
 
 class Config:
@@ -37,7 +37,7 @@ class Config:
 def load_config(path: str | Path | None = None) -> Config:
     """Load a config file. Resolution order: explicit ``path`` argument, the
     RGCN_CONFIG env var (lets every pipeline module run against a split/ablation
-    variant without signature changes), then rgcn/config.yml."""
+    variant without signature changes), then rgcn/configs/seed42.yml."""
     if path is None:
         path = os.environ.get("RGCN_CONFIG") or DEFAULT_CONFIG
     path = Path(path)

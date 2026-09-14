@@ -27,7 +27,7 @@ RELEASED_DROP = ["NHDPlusID", "SiteIDCode", "Date",
                  "StreamOrde", "FCode", "n_discharge", "n_water_presence",
                  "has_data"]
 
-BASELINES_DIR = RESULTS / "baselines"
+BASELINES_DIR = RESULTS / "paper" / "baselines"
 
 
 def train_eval(frame: pd.DataFrame, make_model, split: str = "temporal",
@@ -77,7 +77,7 @@ def write_report(name: str, results: dict, notes: str) -> Path:
     BASELINES_DIR.mkdir(parents=True, exist_ok=True)
     payload = {s: {"metrics": r["metrics"], "per_class": r["per_class"]}
                for s, r in results.items()}
-    (BASELINES_DIR / f"{name}_released_splits.json").write_text(
+    (BASELINES_DIR / f"{name}_splits.json").write_text(
         json.dumps(payload, indent=2))
 
     table = summary_table({s: r["metrics"] for s, r in results.items()})
@@ -87,7 +87,7 @@ def write_report(name: str, results: dict, notes: str) -> Path:
     for _, row in table.iterrows():
         md_rows.append("| " + " | ".join(
             f"{v:.3f}" if isinstance(v, float) else str(v) for v in row) + " |")
-    lines = [f"# {name} — released split protocol", "", notes, "",
+    lines = [f"# {name} — HOBO evaluation protocols with causal depth filling", "", notes, "",
              *md_rows, "",
              "Per-class (dry / wet):", ""]
     for s, r in results.items():
@@ -98,6 +98,6 @@ def write_report(name: str, results: dict, notes: str) -> Path:
             f" (n={pc['dry']['support']}), wet P/R/F1 "
             f"{pc['wet']['precision']:.3f}/{pc['wet']['recall']:.3f}/{pc['wet']['f1']:.3f}"
             f" (n={pc['wet']['support']})")
-    out = BASELINES_DIR / f"{name}_released_splits.md"
+    out = BASELINES_DIR / f"{name}_splits.md"
     out.write_text("\n".join(lines) + "\n")
     return out

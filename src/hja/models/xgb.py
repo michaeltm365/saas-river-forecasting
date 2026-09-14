@@ -1,6 +1,6 @@
-"""XGBoost baseline (released protocol).
+"""XGBoost baseline (original splits, causal depth filling).
 
-Run all three released splits and write results/baselines/xgb_*.md/json:
+Run all three released splits and write results/paper/baselines/xgb_*.md/json:
 
     uv run python -m hja.models.xgb
 """

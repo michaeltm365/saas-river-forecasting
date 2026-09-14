@@ -46,7 +46,8 @@ _MAXDEPTH_COLS = [F.feature_index(v)
 _DRIVER_COLS = [F.feature_index(v) for v in F.DRIVER_VARS]
 
 
-def mask_forecast_tail(xt: torch.Tensor, seq_len: int, mode: str) -> torch.Tensor:
+def mask_forecast_tail(xt: torch.Tensor, seq_len: int, mode: str,
+                       status_available_index: int | None = None) -> torch.Tensor:
     """Apply forecast-tail masking to a time-feature window tensor.
 
     xt: (..., wl, N, n_time_features) — window batch with time as dim -3.
@@ -67,6 +68,11 @@ def mask_forecast_tail(xt: torch.Tensor, seq_len: int, mode: str) -> torch.Tenso
     # Lag-1 columns: freeze positions seq_len+1.. at position seq_len's value.
     frozen = xt[..., seq_len : seq_len + 1, :, _LAG1_COLS]
     xt[..., seq_len + 1 :, :, _LAG1_COLS] = frozen
+
+    if status_available_index is not None:
+        j = status_available_index
+        frozen = xt[..., seq_len : seq_len + 1, :, j].clone()
+        xt[..., seq_len + 1 :, :, j] = frozen
 
     # MaxDepth (same-day obs): freeze the whole tail at day t's value.
     frozen = xt[..., seq_len - 1 : seq_len, :, _MAXDEPTH_COLS]

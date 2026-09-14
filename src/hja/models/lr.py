@@ -1,6 +1,6 @@
-"""Logistic Regression baseline (released protocol).
+"""Logistic Regression baseline (original splits, causal depth filling).
 
-Run all three released splits and write results/baselines/lr_*.md/json:
+Run all three released splits and write results/paper/baselines/lr_*.md/json:
 
     uv run python -m hja.models.lr
 """

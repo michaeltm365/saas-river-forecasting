@@ -1,5 +1,5 @@
 """Shared LSTM architecture + sequence construction (used by the HOBO-only
-baseline here and by benchmarks/lstm_flagship_splits.py)."""
+HOBO-only and canonical all-sites models)."""
 
 from __future__ import annotations
 

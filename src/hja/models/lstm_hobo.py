@@ -1,14 +1,9 @@
-"""LSTM baseline on HOBO sensor sites only (random sequence split).
+"""HOBO-only LSTM with causal depth filling and chronological evaluation.
 
-Follows the released lstm_hobo_sites.ipynb protocol (30-day per-site windows,
-random 80/20 sequence split, ADASYN on training sequences, hidden 64 / 2
-layers / dropout 0.3 / lr 1e-4 / batch 32, early stopping) with ONE deliberate
-fix: the released notebook fit its StandardScaler on the WHOLE frame before
-splitting, leaking test statistics into scaling. Here the scaler is fit on the
-training sequences only. (Released random-split accuracy was 0.967; expect a
-slightly different number under the fixed scaler.)
-
-Run:  uv run python -m hja.models.lstm_hobo
+Thirty-observation histories predict status three observation records ahead.
+Test issue dates begin September 15, 2020; training targets precede that date. The last 20% of distinct pre-test
+target dates are reserved for early stopping before scaling or ADASYN.
+Run: uv run python -m hja.models.lstm_hobo
 """
 
 from __future__ import annotations
@@ -20,51 +15,77 @@ import pandas as pd
 import torch
 import torch.nn as nn
 from imblearn.over_sampling import ADASYN
-from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from torch.utils.data import DataLoader, TensorDataset
 
 from hja.data import build_hobo_frame, feature_frame
 from hja.evaluation import metrics, per_class
 from hja.models.lstm import LSTMModel, make_sequences
-from hja.models.tabular import BASELINES_DIR
+
+
+def temporal_masks(target_dates, split_date="2020-09-15", issue_dates=None):
+    """Split on actual target dates; keep equal dates together across sites."""
+    dates = np.asarray(target_dates, dtype="datetime64[ns]")
+    cutoff = np.datetime64(split_date)
+    earlier = np.unique(dates[dates < cutoff])
+    if len(earlier) < 2:
+        raise ValueError("Need at least two distinct pre-test target dates")
+    inner = earlier[min(max(int(.8 * len(earlier)), 1), len(earlier)-1)]
+    masks = dates < inner, (dates >= inner) & (dates < cutoff), dates >= cutoff
+    if issue_dates is not None:
+        issues = np.asarray(issue_dates, dtype="datetime64[ns]")
+        valid = issues < dates
+        masks = masks[0] & valid, masks[1] & valid & (issues >= inner), masks[2] & valid & (issues >= cutoff)
+    if not all(m.any() for m in masks):
+        raise ValueError("Temporal fit, early-stopping, and test sets must be nonempty")
+    return *masks, inner
 
 
 def train_eval(frame: pd.DataFrame | None = None, seed: int = 42,
                device: torch.device | None = None,
                hidden: int = 64, layers: int = 2, dropout: float = 0.3,
                lr: float = 1e-4, batch: int = 32, epochs: int = 15,
-               patience: int = 5, verbose: bool = True) -> dict:
+               patience: int = 5, verbose: bool = True,
+               split_date: str = "2020-09-15") -> dict:
     np.random.seed(seed)
     torch.manual_seed(seed)
     if device is None:
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     # The released LSTM-HOBO frame never merges the stream-order table.
-    frame = build_hobo_frame(include_order=False) if frame is None else frame
-    X_feat, feats = feature_frame(frame)
+    frame = build_hobo_frame(include_order=False, include_target_dates=True) if frame is None else frame
+    X_feat, feats = feature_frame(frame, causal=True)
     df = frame.assign(**{c: X_feat[c].values for c in feats})
 
-    # Sequences from the UNSCALED frame, then split, then fit the scaler on
-    # training sequences only (leak fix vs the released global fit).
+    if "target_date" not in df:
+        raise ValueError("Supply target_date from build_hobo_frame(include_target_dates=True)")
     X_all, y_all, sites = make_sequences(df, feats)
-    X_train, X_test, y_train, y_test, s_train, s_test = train_test_split(
-        X_all, y_all, sites, test_size=0.2, shuffle=True, random_state=seed)
-
+    # Match the shared sequence builder exactly, preserving actual target dates.
+    target_dates = np.concatenate([
+        g.target_date.to_numpy()[29:len(g)-1]
+        for _, g in df.groupby("NHDPlusID") if len(g) > 30
+    ])
+    issue_dates = np.concatenate([
+        g.Date.to_numpy()[29:len(g)-1]
+        for _, g in df.groupby("NHDPlusID") if len(g) > 30
+    ])
+    train_mask, val_mask, test_mask, inner_cutoff = temporal_masks(target_dates, split_date, issue_dates)
+    X_train, y_train = X_all[train_mask], y_all[train_mask]
+    X_val, y_val = X_all[val_mask], y_all[val_mask]
+    X_test, y_test, s_test = X_all[test_mask], y_all[test_mask], sites[test_mask]
     n, T, d = X_train.shape
     scaler = StandardScaler().fit(X_train.reshape(-1, d))
-    X_train = scaler.transform(X_train.reshape(-1, d)).reshape(n, T, d)
-    X_test = scaler.transform(
-        X_test.reshape(-1, d)).reshape(len(X_test), T, d)
+    def scale_sequences(x):
+        return scaler.transform(x.reshape(-1, d)).reshape(x.shape)
+    X_train, X_val, X_test = map(scale_sequences, (X_train, X_val, X_test))
 
-    # ADASYN on training sequences only (flatten 3D -> 2D, resample, reshape).
-    X_res, y_res = ADASYN(random_state=seed).fit_resample(
+    # Synthetic training samples never enter early stopping or testing.
+    X_res, y_tr = ADASYN(random_state=seed).fit_resample(
         X_train.reshape(n, T * d), y_train.astype(int))
-    X_res = X_res.reshape(-1, T, d).astype(np.float32)
-
-    # Inner train/val split for early stopping (released protocol).
-    X_tr, X_val, y_tr, y_val = train_test_split(
-        X_res, y_res, test_size=0.2, random_state=seed)
+    X_tr = X_res.reshape(-1, T, d).astype(np.float32)
+    if verbose:
+        print(f"Target-date split: fit={train_mask.sum()}, early-stop={val_mask.sum()}, "
+              f"test={test_mask.sum()}; inner cutoff={inner_cutoff}; test cutoff={split_date}")
     to_t = lambda a: torch.tensor(np.asarray(a, dtype=np.float32))
     train_loader = DataLoader(
         TensorDataset(to_t(X_tr), to_t(y_tr).reshape(-1, 1)),
@@ -118,7 +139,9 @@ def train_eval(frame: pd.DataFrame | None = None, seed: int = 42,
     return {
         "model": model, "scaler": scaler, "features": feats, "device": device,
         "X_test": X_test, "y_true": y_true, "prob": prob, "pred": pred,
-        "sites_test": s_test,
+        "sites_test": s_test, "target_dates_test": target_dates[test_mask],
+        "issue_dates_test": issue_dates[test_mask],
+        "split_date": split_date, "inner_cutoff": str(inner_cutoff),
         "metrics": metrics(y_true, prob, pred),
         "per_class": per_class(y_true, pred),
     }
@@ -153,26 +176,7 @@ def main() -> int:
     print(f"\nAccuracy: {m['Accuracy']:.4f} | ROC-AUC: {m['ROC-AUC']:.4f} | "
           f"Wet F1: {m['WetF1']:.4f} | Dry F1: {m['DryF1']:.4f} (N={m['N']})")
 
-    BASELINES_DIR.mkdir(parents=True, exist_ok=True)
-    (BASELINES_DIR / "lstm_hobo_random_split.json").write_text(
-        json.dumps({"metrics": m, "per_class": pc}, indent=2))
-    (BASELINES_DIR / "lstm_hobo_random_split.md").write_text(
-        "# LSTM (HOBO only) — random sequence split\n\n"
-        "Released protocol (30-day windows, ADASYN train-only, hidden 64 / 2 "
-        "layers / dropout 0.3 / lr 1e-4 / batch 32, early stopping) with the "
-        "scaler-leak fix: StandardScaler fit on training sequences only "
-        "(the released notebook fit it on the full frame before splitting; "
-        "released accuracy was 0.967). Seed 42. ROC-AUC from probabilities.\n\n"
-        f"| N | Accuracy | ROC-AUC | Wet F1 | Dry F1 | Dry recall |\n"
-        f"|--:|--:|--:|--:|--:|--:|\n"
-        f"| {m['N']} | {m['Accuracy']:.3f} | {m['ROC-AUC']:.3f} | "
-        f"{m['WetF1']:.3f} | {m['DryF1']:.3f} | {m['DryRecall']:.3f} |\n\n"
-        f"Per-class: dry P/R/F1 {pc['dry']['precision']:.3f}/"
-        f"{pc['dry']['recall']:.3f}/{pc['dry']['f1']:.3f} "
-        f"(n={pc['dry']['support']}); wet P/R/F1 {pc['wet']['precision']:.3f}/"
-        f"{pc['wet']['recall']:.3f}/{pc['wet']['f1']:.3f} "
-        f"(n={pc['wet']['support']}).\n")
-    print(f"Wrote {BASELINES_DIR / 'lstm_hobo_random_split.md'}")
+    print(json.dumps({"metrics": m, "per_class": pc}, indent=2))
     return 0
 
 

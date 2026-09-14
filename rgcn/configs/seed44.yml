@@ -1,0 +1,48 @@
+features:
+  exclude_time:
+  - Discharge_CMS_lag_7
+  - HoboWetDry0.05_lag_7
+  status_availability: true
+masking:
+  forecast_mask: obs+drivers
+model:
+  dropout: 0.1
+  hidden_dim: 64
+  recur_dropout: 0.0
+  return_states: false
+  version: v2
+paths:
+  checkpoint: data/retrain/paper/rgcn_availability_s44.pt
+  drivers_parquet: data/retrain/met_drivers.parquet
+  eval_report: results/paper/rgcn_availability_s44.md
+  feature_arrays: data/retrain/paper/arrays/feature_arrays_flagq65.npz
+  graph_out: data/retrain/hja_graph_drivers.gpickle
+  hjflp_report: results/paper/rgcn_hjflp_s44.md
+  met_drivers_csv: data/sciencebase/met_drivers.csv
+  obs_csv: data/sciencebase/obs.csv
+  predictions_dir: data/retrain/paper/predictions_rgcn_availability_s44
+  released_graph: data/huggingface/hja_graph.gpickle
+  scaler_json: data/retrain/paper/arrays/feature_scaler_flagq65.json
+  split_map: data/retrain/paper/arrays/window_split_map_flagq65.csv
+  split_meta: data/retrain/paper/arrays/split_meta_flagq65.json
+  static_vars_csv: data/sciencebase/static_vars.csv
+split:
+  method: quantile_cutoff
+  wetdry_quantile: 0.65
+training:
+  batch_size: 128
+  early_stopping_patience: 20
+  epochs: 100
+  false_positive_weight: 2.0
+  grad_clip: 1.0
+  lambda_discharge: 1.0
+  lambda_wetdry: 0.5
+  learning_rate: 0.001
+  seed: 44
+  weight_decay: 0.0001
+windows:
+  date_end: '2020-12-31'
+  date_start: '1980-01-02'
+  forecast_horizon: 3
+  seq_length: 30
+  stride: 3

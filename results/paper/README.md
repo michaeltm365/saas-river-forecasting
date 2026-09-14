@@ -4,7 +4,7 @@
 - `baselines/`: causal LR/XGBoost results and temporal HOBO-only LSTM results, with prediction snapshots.
 - `sensitivity.csv`: the default and twelve manuscript sensitivity settings, seed 42. `sensitivity_predictions/` contains the sensor and observed-discharge predictions supporting every row.
 - `copula/`: raw seed-42 observed-period counts, intervals, and maps.
-- `figure3c_lstm_hobo.*`, `figure3d_lstm_availability.*`: current LSTM importance panels.
+- `figure3/`: combined Figure 3 and individual panels; both LSTMs use wet-class F1. Older top-level panel filenames remain compatibility copies.
 - `predictions/`: canonical neural exports, raw daily sensor labels, and stream orders for reproducible evaluation.
 - `map_inputs/`: geographic caches used to reproduce the copula map.
 

@@ -1,0 +1,20 @@
+{
+  "source_commit": "0dd101a",
+  "plotting_origin": "50e33bb individual notebooks; current src/hja/importance.py; composite layout reconstructed from Aug 31 Figure 3",
+  "panels": {
+    "a": "LR temporal seed 42, causal filling, coefficients; predicted probabilities verified against canonical snapshot",
+    "b": "XGBoost temporal seed 42, causal filling, gain; predicted probabilities verified against canonical snapshot",
+    "c": "HOBO LSTM temporal seed 42, N=742, one permutation per feature, wet F1 decrease; canonical saved importance",
+    "d": "All-sites availability LSTM seed 42, N=956 sensor targets, five permutations per feature, wet F1 decrease; rescored canonical checkpoint"
+  },
+  "negative_permutation_values": "Signed values retained in source CSV; negative values zeroed for ranking and plotting",
+  "input_sha256": {
+    "inputs/lr_importance.csv": "ddf89606fe003583aa043d0ebb07c81e036924bfc6063767e2a30cb0651ec00f",
+    "inputs/lr_temporal_predictions.csv": "85fa1af0950a5fb894522fb5736c2113dc1d3b86f5432e04822964c60e3edf45",
+    "inputs/lstm_all_importance.csv": "a13a90850a0251e68213f3b5a53c63de91050f1516a829d09e6de2869abfa672",
+    "inputs/lstm_hobo_importance.csv": "c5d4d8af529f1cffa5a6415fd96f03d37e9c38a9652bed0e5f0a24e451a29916",
+    "inputs/lstm_hobo_temporal.json": "a947d7535116d8bbe29b8c66f5bfb80fad8774ab3c906a63e5e505cbc9052ef3",
+    "inputs/xgb_importance.csv": "c3912d19d623162ea4ad2d0e46cc0f0ed06ff9d116b98aa9f4286f3e26a229e9",
+    "inputs/xgb_temporal_predictions.csv": "ab6ef20cc3015c6b9b598e08fb8f005f196fee96fe8f7ba41def9dc4572efded"
+  }
+}

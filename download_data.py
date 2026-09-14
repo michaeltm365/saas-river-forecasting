@@ -1,39 +1,13 @@
-"""
-Download data for the SAAS x USGS headwater streamflow project.
+"""Download public HJA inputs and the pinned canonical paper model bundle.
 
-Raw public USGS data comes from ScienceBase:
-    https://www.sciencebase.gov/catalog/item/6977e36dd4be02609dd04095
-
-Derived artifacts (graph topology, pivots, model weights, predictions) come from
-Hugging Face:
-    https://huggingface.co/michaeltm365/saas-river-forecasting
-
-Layout on disk (under ./data/):
-    data/
-      sciencebase/
-        obs.csv
-        static_vars.csv
-        met_drivers.csv          (optional, 2.13 GB)
-      huggingface/
-        degrees.parquet
-        nhd_id_stream_order_permanence.csv
-        hja_graph.gpickle
-        hja_edge_index.npz
-        obs_pivot.csv
-        static_vars_pivot.csv
-        window_split_map.csv
-        best_model.pt
-        train_val_predictions_day1.csv   (optional, 1.99 GB)
-        train_val_predictions_day2.csv   (optional, 1.99 GB)
-        train_val_predictions_day3.csv   (optional, 1.99 GB)
-
-Usage:
-    python download_data.py                          # default set
-    python download_data.py --include drivers        # add met_drivers.csv
-    python download_data.py --include predictions    # add the 3 RGCN prediction CSVs
-    python download_data.py --include drivers,predictions
-    python download_data.py --all                    # everything
-    python download_data.py --force                  # re-download even if file exists
+Use --canonical-only to restore checkpoints, prepared inputs, configs, and
+paper prediction/result snapshots without contacting ScienceBase. Existing
+files with different checksums are preserved unless --force is supplied.
+Raw training observations and drivers remain attributed to the ScienceBase
+release. --include drivers adds the large meteorological CSV; it may need
+the manual download printed by this script. Legacy checkpoints and historical
+predictions are excluded. --include predictions is retained as a compatibility
+option; canonical predictions are always included in the canonical bundle.
 """
 
 from __future__ import annotations
@@ -57,7 +31,8 @@ SCIENCEBASE_ITEM_URL = (
 )
 
 HF_REPO_ID = "michaeltm365/saas-river-forecasting"
-HF_RESOLVE_URL = f"https://huggingface.co/{HF_REPO_ID}/resolve/main/{{name}}"
+HF_REVISION = "paper-canonical-2026-09-14"
+HF_RESOLVE_URL = f"https://huggingface.co/{HF_REPO_ID}/resolve/{HF_REVISION}/{{name}}"
 
 
 def _sciencebase_files() -> dict[str, dict]:
@@ -73,19 +48,7 @@ SCIENCEBASE_FILES = [
     ("met_drivers.csv", "drivers"),
 ]
 
-HUGGINGFACE_FILES = [
-    ("degrees.parquet", None),
-    ("nhd_id_stream_order_permanence.csv", None),
-    ("hja_graph.gpickle", None),
-    ("hja_edge_index.npz", None),
-    ("obs_pivot.csv", None),
-    ("static_vars_pivot.csv", None),
-    ("window_split_map.csv", None),
-    ("best_model.pt", None),
-    ("train_val_predictions_day1.csv", "predictions"),
-    ("train_val_predictions_day2.csv", "predictions"),
-    ("train_val_predictions_day3.csv", "predictions"),
-]
+
 
 OPTIONAL_GROUPS = {"drivers", "predictions"}
 
@@ -143,6 +106,36 @@ def _verify_md5(dest: Path, expected: str) -> bool:
     return ok
 
 
+def download_canonical(force: bool) -> int:
+    """Restore the release layout and verify every payload against its manifest."""
+    with urllib.request.urlopen(HF_RESOLVE_URL.format(name="canonical/MANIFEST.json")) as response:
+        manifest = json.load(response)
+    failures = []
+    for item in manifest["files"]:
+        relative = Path(item["local_path"])
+        if relative.is_absolute() or ".." in relative.parts:
+            raise ValueError(f"Unsafe manifest path: {relative}")
+        dest = REPO_ROOT / relative
+        expected = item["sha256"]
+        if dest.exists():
+            actual = hashlib.sha256(dest.read_bytes()).hexdigest()
+            if actual == expected:
+                print(f"  [verified] {relative}")
+                continue
+            if not force:
+                print(f"  [conflict] {relative}: differs from release; use --force to replace")
+                failures.append(str(relative))
+                continue
+        _download(HF_RESOLVE_URL.format(name=item["path"]), dest, force=True)
+        if dest.stat().st_size != item["bytes"] or hashlib.sha256(dest.read_bytes()).hexdigest() != expected:
+            raise ValueError(f"Release checksum mismatch: {relative}")
+    if failures:
+        print(f"Canonical bundle has {len(failures)} conflicting local files.")
+        return 1
+    print(f"Verified {len(manifest['files'])} canonical release files ({HF_REVISION}).")
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument(
@@ -150,9 +143,13 @@ def main() -> int:
         default="",
         help=f"Comma-separated optional groups to include: {sorted(OPTIONAL_GROUPS)}",
     )
+    parser.add_argument("--canonical-only", action="store_true", help="Download and verify the pinned canonical model bundle without contacting ScienceBase")
     parser.add_argument("--all", action="store_true", help="Download everything, including optional groups")
     parser.add_argument("--force", action="store_true", help="Re-download files that already exist")
     args = parser.parse_args()
+
+    if args.canonical_only:
+        return download_canonical(args.force)
 
     requested = {g.strip() for g in args.include.split(",") if g.strip()}
     unknown = requested - OPTIONAL_GROUPS
@@ -211,17 +208,8 @@ def main() -> int:
                 print(f"         Expected MD5: {md5}")
             failures.append(name)
 
-    print(f"\nHugging Face -> {HUGGINGFACE_DIR}")
-    for name, group in HUGGINGFACE_FILES:
-        if not _should_get(group):
-            print(f"  [omit] {name} (group '{group}' not requested; pass --include {group} or --all)")
-            continue
-        try:
-            _download(HF_RESOLVE_URL.format(name=name), HUGGINGFACE_DIR / name, args.force)
-        except urllib.error.HTTPError as e:
-            print(f"  [fail] {name}: HTTP {e.code} from Hugging Face "
-                  f"({HF_RESOLVE_URL.format(name=name)})")
-            failures.append(name)
+    if download_canonical(args.force):
+        failures.append("canonical Hugging Face bundle")
 
     if failures:
         print(f"\nDone, but {len(failures)} file(s) need attention: {', '.join(failures)}")

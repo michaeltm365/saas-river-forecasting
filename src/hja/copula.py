@@ -92,3 +92,41 @@ def site_row(site: int, val_probs, val_true_wet, daily: pd.DataFrame,
     return dict(site=int(site), n=len(p_wet), rho=rho, rho_used=rho_used,
                 np=n_pairs, true=true, mean=mean, lo=lo, hi=hi,
                 ok=bool(lo <= true <= hi))
+
+
+def observed_period_counts(p_dry, dates, rho: float, site: int, seed: int = 42,
+                           n_sims: int = N_SIMS) -> np.ndarray:
+    """Simulated dry counts on the supplied dates, preserving calendar gaps.
+
+    Probabilities stay attached to dates; no probability bootstrap or annual
+    scaling. Latent AR(1) evolves on every calendar day, but only supplied
+    dates contribute to the count. Inputs describe rolling forecasts, not
+    a joint forecast issued before the whole period.
+    """
+    p = np.asarray(p_dry, dtype=float)
+    d = pd.DatetimeIndex(pd.to_datetime(dates))
+    if p.ndim != 1 or len(p) == 0 or len(p) != len(d):
+        raise ValueError("Nonempty, aligned one-dimensional probabilities and dates required")
+    if not np.isfinite(p).all() or ((p < 0) | (p > 1)).any():
+        raise ValueError("Probabilities must be finite and in [0, 1]")
+    if d.hasnans or d.has_duplicates or not (d == d.normalize()).all():
+        raise ValueError("Dates must be unique, valid calendar days")
+    if not np.isfinite(rho) or not -1 <= rho <= 1 or n_sims < 1:
+        raise ValueError("rho must be in [-1,1] and n_sims positive")
+    order = np.argsort(d)
+    d, p = d[order], p[order]
+    offsets = (d - d[0]).days.to_numpy()
+    rng = np.random.default_rng([seed, int(site) % (2**63)])
+    z = rng.standard_normal(n_sims)
+    counts = np.zeros(n_sims, dtype=np.int32)
+    scale = np.sqrt(max(1 - rho**2, 0.0))
+    j = 0
+    for day in range(int(offsets[-1]) + 1):
+        if day:
+            z = rho * z + scale * rng.standard_normal(n_sims)
+        if day == offsets[j]:
+            counts += norm.cdf(z) < p[j]
+            j += 1
+            if j == len(p):
+                break
+    return counts

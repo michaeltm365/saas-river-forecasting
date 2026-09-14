@@ -1,0 +1,5 @@
+Loaded checkpoint epoch=48 val_loss=0.1405
+Exporting 112 windows x 793 sites x 3 horizons | forecast_mask=obs+drivers | exclude_time=['Discharge_CMS_lag_7', 'HoboWetDry0.05_lag_7']
+  day1: 88,816 rows (989 with wet/dry label) -> train_val_predictions_day1.csv
+  day2: 88,816 rows (968 with wet/dry label) -> train_val_predictions_day2.csv
+  day3: 88,816 rows (945 with wet/dry label) -> train_val_predictions_day3.csv

@@ -1,0 +1,26 @@
+{
+  "pid": 1614049,
+  "gpu": 3,
+  "status": "complete",
+  "started": "2026-09-13T19:23:17.098222+00:00",
+  "completed": [
+    "do00_train",
+    "do00_export",
+    "fpw1_train",
+    "fpw1_export",
+    "h128_train",
+    "h128_export",
+    "l05c10_train",
+    "l05c10_export",
+    "lr3e3_train",
+    "lr3e3_export",
+    "nostat_train",
+    "nostat_export",
+    "wd0_train",
+    "wd0_export"
+  ],
+  "current": null,
+  "updated": "2026-09-13T20:53:45.233573+00:00",
+  "child_pid": 1686238,
+  "finished": "2026-09-13T20:53:52.904735+00:00"
+}

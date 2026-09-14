@@ -1,3 +1,5 @@
+> **September 13 supersession:** The canonical neural models now include status availability. Numerical replacements and model descriptions in this document must be reconciled with `context/PAPER_AVAILABILITY_UPDATE.md` and `results/canonical_availability/`. Earlier ablation results remain historical.
+
 # Flagship RGCN campaign — consolidated results (Sep 2026)
 
 **Status: these are the candidate paper-revision results**, produced after the

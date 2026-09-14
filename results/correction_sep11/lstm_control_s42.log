@@ -1,0 +1,12 @@
+[q65 s42] sequences: 8,454 train / 1,072 val / 0 buffer
+  epoch  1/15 val=0.0392
+  epoch  2/15 val=0.0302
+  epoch  3/15 val=0.0362
+  epoch  4/15 val=0.0135
+  epoch  5/15 val=0.0163
+  epoch  6/15 val=0.0189
+  epoch  7/15 val=0.0181
+  epoch  8/15 val=0.0336
+  epoch  9/15 val=0.0147
+[q65 s42] all: acc=0.913 auc=0.966 dryF1=0.841 (N=1072)
+COMPLETE /bluesclues-data/home/michaelmurphy/saas-river-forecasting/data/retrain/correction_sep11/lstm_control_s42.pt

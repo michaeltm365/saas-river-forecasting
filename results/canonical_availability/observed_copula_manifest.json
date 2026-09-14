@@ -1,0 +1,13 @@
+{
+  "n_sims": 10000,
+  "seeds": [
+    42,
+    43,
+    44
+  ],
+  "cutoff": "2020-09-10",
+  "annualization": false,
+  "probability_resampling": false,
+  "calendar_gaps_preserved": true,
+  "rolling_forecasts": true
+}

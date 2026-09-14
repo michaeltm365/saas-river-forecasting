@@ -1,0 +1,62 @@
+[
+  {
+    "tag": "cls_only",
+    "config": "rgcn/availability_sweep/config_cls_only.yml"
+  },
+  {
+    "tag": "do00",
+    "config": "rgcn/availability_sweep/config_do00.yml"
+  },
+  {
+    "tag": "do03",
+    "config": "rgcn/availability_sweep/config_do03.yml"
+  },
+  {
+    "tag": "fpw1",
+    "config": "rgcn/availability_sweep/config_fpw1.yml"
+  },
+  {
+    "tag": "fpw4",
+    "config": "rgcn/availability_sweep/config_fpw4.yml"
+  },
+  {
+    "tag": "h128",
+    "config": "rgcn/availability_sweep/config_h128.yml"
+  },
+  {
+    "tag": "h32",
+    "config": "rgcn/availability_sweep/config_h32.yml"
+  },
+  {
+    "tag": "l05c10",
+    "config": "rgcn/availability_sweep/config_l05c10.yml"
+  },
+  {
+    "tag": "l10c10",
+    "config": "rgcn/availability_sweep/config_l10c10.yml"
+  },
+  {
+    "tag": "lr3e3",
+    "config": "rgcn/availability_sweep/config_lr3e3.yml"
+  },
+  {
+    "tag": "lr3e4",
+    "config": "rgcn/availability_sweep/config_lr3e4.yml"
+  },
+  {
+    "tag": "nostat",
+    "config": "rgcn/availability_sweep/config_nostat.yml"
+  },
+  {
+    "tag": "reg_only",
+    "config": "rgcn/availability_sweep/config_reg_only.yml"
+  },
+  {
+    "tag": "wd0",
+    "config": "rgcn/availability_sweep/config_wd0.yml"
+  },
+  {
+    "tag": "wd1e3",
+    "config": "rgcn/availability_sweep/config_wd1e3.yml"
+  }
+]

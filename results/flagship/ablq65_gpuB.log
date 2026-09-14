@@ -1,0 +1,78 @@
+=== train ablq65 lr3e4  23:15:01 ===
+Device: cuda:0 (NVIDIA RTX 6000 Ada Generation)
+Windows: 4944 train / 37 val | epochs=100 | forecast_mask=obs+drivers | exclude_time=['Discharge_CMS_lag_7', 'HoboWetDry0.05_lag_7']
+RGCN_v2 input_dim=35 params=29,890
+epoch   1/100  train=0.2866  val=0.4501  best=0.4501@1  19.1s *best*
+epoch   2/100  train=0.1622  val=0.4501  best=0.4501@1  18.5s
+epoch   3/100  train=0.1277  val=0.4794  best=0.4501@1  18.5s
+epoch   4/100  train=0.1133  val=0.5059  best=0.4501@1  18.4s
+epoch   5/100  train=0.1063  val=0.5280  best=0.4501@1  18.6s
+epoch   6/100  train=0.1021  val=0.5355  best=0.4501@1  18.6s
+epoch   7/100  train=0.0990  val=0.5277  best=0.4501@1  18.5s
+epoch   8/100  train=0.0970  val=0.5168  best=0.4501@1  18.7s
+epoch   9/100  train=0.0941  val=0.4999  best=0.4501@1  18.3s
+epoch  10/100  train=0.0923  val=0.4821  best=0.4501@1  18.4s
+epoch  11/100  train=0.0912  val=0.4539  best=0.4501@1  18.6s
+epoch  12/100  train=0.0894  val=0.4355  best=0.4355@12  18.6s *best*
+epoch  13/100  train=0.0872  val=0.4077  best=0.4077@13  18.6s *best*
+epoch  14/100  train=0.0863  val=0.3803  best=0.3803@14  18.6s *best*
+epoch  15/100  train=0.0850  val=0.3588  best=0.3588@15  18.5s *best*
+epoch  16/100  train=0.0837  val=0.3377  best=0.3377@16  18.6s *best*
+epoch  17/100  train=0.0830  val=0.3126  best=0.3126@17  18.5s *best*
+epoch  18/100  train=0.0828  val=0.2946  best=0.2946@18  18.6s *best*
+epoch  19/100  train=0.0811  val=0.2809  best=0.2809@19  18.6s *best*
+epoch  20/100  train=0.0799  val=0.2680  best=0.2680@20  18.6s *best*
+epoch  21/100  train=0.0795  val=0.2555  best=0.2555@21  18.4s *best*
+epoch  22/100  train=0.0790  val=0.2461  best=0.2461@22  18.6s *best*
+epoch  23/100  train=0.0793  val=0.2392  best=0.2392@23  18.5s *best*
+epoch  24/100  train=0.0774  val=0.2304  best=0.2304@24  18.2s *best*
+epoch  25/100  train=0.0778  val=0.2242  best=0.2242@25  18.4s *best*
+epoch  26/100  train=0.0765  val=0.2182  best=0.2182@26  18.5s *best*
+epoch  27/100  train=0.0765  val=0.2166  best=0.2166@27  18.4s *best*
+epoch  28/100  train=0.0769  val=0.2125  best=0.2125@28  18.6s *best*
+epoch  29/100  train=0.0754  val=0.2079  best=0.2079@29  18.5s *best*
+epoch  30/100  train=0.0755  val=0.1990  best=0.1990@30  18.5s *best*
+epoch  31/100  train=0.0750  val=0.1965  best=0.1965@31  18.5s *best*
+epoch  32/100  train=0.0752  val=0.1954  best=0.1954@32  18.5s *best*
+epoch  33/100  train=0.0743  val=0.1913  best=0.1913@33  18.6s *best*
+epoch  34/100  train=0.0741  val=0.1888  best=0.1888@34  18.7s *best*
+epoch  35/100  train=0.0738  val=0.1850  best=0.1850@35  18.4s *best*
+epoch  36/100  train=0.0732  val=0.1845  best=0.1845@36  18.6s *best*
+epoch  37/100  train=0.0727  val=0.1812  best=0.1812@37  18.5s *best*
+epoch  38/100  train=0.0731  val=0.1812  best=0.1812@37  18.4s
+epoch  39/100  train=0.0728  val=0.1775  best=0.1775@39  18.6s *best*
+epoch  40/100  train=0.0725  val=0.1741  best=0.1741@40  18.5s *best*
+epoch  41/100  train=0.0715  val=0.1732  best=0.1732@41  18.5s *best*
+epoch  42/100  train=0.0719  val=0.1697  best=0.1697@42  18.6s *best*
+epoch  43/100  train=0.0711  val=0.1709  best=0.1697@42  18.5s
+epoch  44/100  train=0.0719  val=0.1717  best=0.1697@42  18.6s
+epoch  45/100  train=0.0715  val=0.1673  best=0.1673@45  18.5s *best*
+epoch  46/100  train=0.0704  val=0.1684  best=0.1673@45  18.6s
+epoch  47/100  train=0.0708  val=0.1636  best=0.1636@47  18.6s *best*
+epoch  48/100  train=0.0706  val=0.1668  best=0.1636@47  18.6s
+epoch  49/100  train=0.0701  val=0.1639  best=0.1636@47  18.7s
+epoch  50/100  train=0.0695  val=0.1614  best=0.1614@50  18.6s *best*
+epoch  51/100  train=0.0693  val=0.1608  best=0.1608@51  18.6s *best*
+epoch  52/100  train=0.0692  val=0.1584  best=0.1584@52  18.2s *best*
+epoch  53/100  train=0.0687  val=0.1575  best=0.1575@53  18.4s *best*
+epoch  54/100  train=0.0694  val=0.1578  best=0.1575@53  18.6s
+epoch  55/100  train=0.0687  val=0.1559  best=0.1559@55  18.6s *best*
+epoch  56/100  train=0.0685  val=0.1548  best=0.1548@56  18.4s *best*
+epoch  57/100  train=0.0685  val=0.1552  best=0.1548@56  18.1s
+epoch  58/100  train=0.0681  val=0.1545  best=0.1545@58  18.2s *best*
+epoch  59/100  train=0.0675  val=0.1538  best=0.1538@59  18.6s *best*
+epoch  60/100  train=0.0678  val=0.1552  best=0.1538@59  18.6s
+epoch  61/100  train=0.0673  val=0.1528  best=0.1528@61  18.3s *best*
+epoch  62/100  train=0.0674  val=0.1522  best=0.1522@62  18.7s *best*
+epoch  63/100  train=0.0669  val=0.1521  best=0.1521@63  18.7s *best*
+epoch  64/100  train=0.0666  val=0.1503  best=0.1503@64  18.5s *best*
+epoch  65/100  train=0.0672  val=0.1508  best=0.1503@64  18.6s
+epoch  66/100  train=0.0664  val=0.1479  best=0.1479@66  18.6s *best*
+epoch  67/100  train=0.0661  val=0.1476  best=0.1476@67  18.6s *best*
+epoch  68/100  train=0.0661  val=0.1474  best=0.1474@68  18.5s *best*
+epoch  69/100  train=0.0665  val=0.1510  best=0.1474@68  18.5s
+epoch  70/100  train=0.0660  val=0.1463  best=0.1463@70  18.8s *best*
+epoch  71/100  train=0.0658  val=0.1454  best=0.1454@71  18.6s *best*
+epoch  72/100  train=0.0659  val=0.1448  best=0.1448@72  18.6s *best*
+epoch  73/100  train=0.0653  val=0.1452  best=0.1448@72  18.7s
+epoch  74/100  train=0.0659  val=0.1453  best=0.1448@72  18.5s

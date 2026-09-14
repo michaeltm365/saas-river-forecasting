@@ -1,0 +1,31 @@
+{
+  "pid": 3154773,
+  "started": "2026-09-11T00:53:38.532174+00:00",
+  "gpu": 0,
+  "status": "complete",
+  "completed": [
+    "lstm_control_s42",
+    "lstm_availability_s42",
+    "rgcn_availability_s42_train",
+    "rgcn_availability_s42_export_predictions",
+    "rgcn_availability_s42_eval_report",
+    "rgcn_availability_s42_daily_export",
+    "lstm_control_s43",
+    "lstm_availability_s43",
+    "rgcn_availability_s43_train",
+    "rgcn_availability_s43_export_predictions",
+    "rgcn_availability_s43_eval_report",
+    "rgcn_availability_s43_daily_export",
+    "lstm_control_s44",
+    "lstm_availability_s44",
+    "rgcn_availability_s44_train",
+    "rgcn_availability_s44_export_predictions",
+    "rgcn_availability_s44_eval_report",
+    "rgcn_availability_s44_daily_export",
+    "matched_evaluation"
+  ],
+  "current": null,
+  "updated": "2026-09-11T01:58:00.155476+00:00",
+  "child_pid": 3215575,
+  "finished": "2026-09-11T01:58:41.650725+00:00"
+}

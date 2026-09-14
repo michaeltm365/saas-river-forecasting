@@ -1,0 +1,28 @@
+{
+  "pid": 1614048,
+  "gpu": 2,
+  "status": "complete",
+  "started": "2026-09-13T19:23:17.097852+00:00",
+  "completed": [
+    "cls_only_train",
+    "cls_only_export",
+    "do03_train",
+    "do03_export",
+    "fpw4_train",
+    "fpw4_export",
+    "h32_train",
+    "h32_export",
+    "l10c10_train",
+    "l10c10_export",
+    "lr3e4_train",
+    "lr3e4_export",
+    "reg_only_train",
+    "reg_only_export",
+    "wd1e3_train",
+    "wd1e3_export"
+  ],
+  "current": null,
+  "updated": "2026-09-13T21:21:42.244657+00:00",
+  "child_pid": 1716026,
+  "finished": "2026-09-13T21:21:49.483788+00:00"
+}

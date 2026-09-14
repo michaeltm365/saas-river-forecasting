@@ -1,0 +1,7 @@
+{
+  "sensor_rows": 908,
+  "calibration_rows": 579,
+  "reaches": 22,
+  "covered": 19,
+  "interpretation": "Annualized late-season equivalents, not observed annual counts; in-sample training calibration"
+}

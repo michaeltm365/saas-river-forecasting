@@ -1,0 +1,274 @@
+=== stride-1 export: rgcn/flagship/config_ph.yml (2020-06-16:2020-10-29)  03:35:34 ===
+Loaded checkpoint epoch=34 val_loss=0.1359
+Exporting 136 windows x 793 sites x 3 horizons | forecast_mask=obs+drivers | exclude_time=['Discharge_CMS_lag_7', 'HoboWetDry0.05_lag_7']
+  day1: 107,848 rows (2,684 with wet/dry label) -> train_val_predictions_day1.csv
+  day2: 107,848 rows (2,687 with wet/dry label) -> train_val_predictions_day2.csv
+  day3: 107,848 rows (2,688 with wet/dry label) -> train_val_predictions_day3.csv
+=== stride-1 export: rgcn/flagship/config_sh.yml (2020-06-16:2020-10-29)  03:35:42 ===
+Loaded checkpoint epoch=34 val_loss=0.1291
+Exporting 136 windows x 793 sites x 3 horizons | forecast_mask=obs+drivers | exclude_time=['Discharge_CMS_lag_7', 'HoboWetDry0.05_lag_7']
+  day1: 107,848 rows (2,684 with wet/dry label) -> train_val_predictions_day1.csv
+  day2: 107,848 rows (2,687 with wet/dry label) -> train_val_predictions_day2.csv
+  day3: 107,848 rows (2,688 with wet/dry label) -> train_val_predictions_day3.csv
+=== stride-1 export: rgcn/flagship/config_q65.yml (2020-09-11:2020-12-31)  03:35:49 ===
+Loaded checkpoint epoch=41 val_loss=0.1470
+Exporting 112 windows x 793 sites x 3 horizons | forecast_mask=obs+drivers | exclude_time=['Discharge_CMS_lag_7', 'HoboWetDry0.05_lag_7']
+  day1: 88,816 rows (989 with wet/dry label) -> train_val_predictions_day1.csv
+  day2: 88,816 rows (968 with wet/dry label) -> train_val_predictions_day2.csv
+  day3: 88,816 rows (945 with wet/dry label) -> train_val_predictions_day3.csv
+=== stride-1 export: rgcn/flagship/config_q80.yml (2020-09-29:2020-12-31)  03:35:56 ===
+Loaded checkpoint epoch=29 val_loss=0.1409
+Exporting 94 windows x 793 sites x 3 horizons | forecast_mask=obs+drivers | exclude_time=['Discharge_CMS_lag_7', 'HoboWetDry0.05_lag_7']
+  day1: 74,542 rows (598 with wet/dry label) -> train_val_predictions_day1.csv
+  day2: 74,542 rows (576 with wet/dry label) -> train_val_predictions_day2.csv
+  day3: 74,542 rows (554 with wet/dry label) -> train_val_predictions_day3.csv
+=== stride-1 export: rgcn/flagship/config_ph_s43.yml (2020-06-16:2020-10-29)  03:36:03 ===
+Loaded checkpoint epoch=47 val_loss=0.1428
+Exporting 136 windows x 793 sites x 3 horizons | forecast_mask=obs+drivers | exclude_time=['Discharge_CMS_lag_7', 'HoboWetDry0.05_lag_7']
+  day1: 107,848 rows (2,684 with wet/dry label) -> train_val_predictions_day1.csv
+  day2: 107,848 rows (2,687 with wet/dry label) -> train_val_predictions_day2.csv
+  day3: 107,848 rows (2,688 with wet/dry label) -> train_val_predictions_day3.csv
+=== stride-1 export: rgcn/flagship/config_sh_s43.yml (2020-06-16:2020-10-29)  03:36:11 ===
+Loaded checkpoint epoch=47 val_loss=0.1355
+Exporting 136 windows x 793 sites x 3 horizons | forecast_mask=obs+drivers | exclude_time=['Discharge_CMS_lag_7', 'HoboWetDry0.05_lag_7']
+  day1: 107,848 rows (2,684 with wet/dry label) -> train_val_predictions_day1.csv
+  day2: 107,848 rows (2,687 with wet/dry label) -> train_val_predictions_day2.csv
+  day3: 107,848 rows (2,688 with wet/dry label) -> train_val_predictions_day3.csv
+=== stride-1 export: rgcn/flagship/config_q65_s43.yml (2020-09-11:2020-12-31)  03:36:19 ===
+Loaded checkpoint epoch=49 val_loss=0.1340
+Exporting 112 windows x 793 sites x 3 horizons | forecast_mask=obs+drivers | exclude_time=['Discharge_CMS_lag_7', 'HoboWetDry0.05_lag_7']
+  day1: 88,816 rows (989 with wet/dry label) -> train_val_predictions_day1.csv
+  day2: 88,816 rows (968 with wet/dry label) -> train_val_predictions_day2.csv
+  day3: 88,816 rows (945 with wet/dry label) -> train_val_predictions_day3.csv
+=== stride-1 export: rgcn/flagship/config_q80_s43.yml (2020-09-29:2020-12-31)  03:36:26 ===
+Loaded checkpoint epoch=50 val_loss=0.1437
+Exporting 94 windows x 793 sites x 3 horizons | forecast_mask=obs+drivers | exclude_time=['Discharge_CMS_lag_7', 'HoboWetDry0.05_lag_7']
+  day1: 74,542 rows (598 with wet/dry label) -> train_val_predictions_day1.csv
+  day2: 74,542 rows (576 with wet/dry label) -> train_val_predictions_day2.csv
+  day3: 74,542 rows (554 with wet/dry label) -> train_val_predictions_day3.csv
+=== stride-1 export: rgcn/flagship/config_ph_s44.yml (2020-06-16:2020-10-29)  03:36:33 ===
+Loaded checkpoint epoch=73 val_loss=0.1368
+Exporting 136 windows x 793 sites x 3 horizons | forecast_mask=obs+drivers | exclude_time=['Discharge_CMS_lag_7', 'HoboWetDry0.05_lag_7']
+  day1: 107,848 rows (2,684 with wet/dry label) -> train_val_predictions_day1.csv
+  day2: 107,848 rows (2,687 with wet/dry label) -> train_val_predictions_day2.csv
+  day3: 107,848 rows (2,688 with wet/dry label) -> train_val_predictions_day3.csv
+=== stride-1 export: rgcn/flagship/config_sh_s44.yml (2020-06-16:2020-10-29)  03:36:41 ===
+Loaded checkpoint epoch=83 val_loss=0.1373
+Exporting 136 windows x 793 sites x 3 horizons | forecast_mask=obs+drivers | exclude_time=['Discharge_CMS_lag_7', 'HoboWetDry0.05_lag_7']
+  day1: 107,848 rows (2,684 with wet/dry label) -> train_val_predictions_day1.csv
+  day2: 107,848 rows (2,687 with wet/dry label) -> train_val_predictions_day2.csv
+  day3: 107,848 rows (2,688 with wet/dry label) -> train_val_predictions_day3.csv
+=== stride-1 export: rgcn/flagship/config_q65_s44.yml (2020-09-11:2020-12-31)  03:36:49 ===
+Loaded checkpoint epoch=48 val_loss=0.1347
+Exporting 112 windows x 793 sites x 3 horizons | forecast_mask=obs+drivers | exclude_time=['Discharge_CMS_lag_7', 'HoboWetDry0.05_lag_7']
+  day1: 88,816 rows (989 with wet/dry label) -> train_val_predictions_day1.csv
+  day2: 88,816 rows (968 with wet/dry label) -> train_val_predictions_day2.csv
+  day3: 88,816 rows (945 with wet/dry label) -> train_val_predictions_day3.csv
+=== stride-1 export: rgcn/flagship/config_q80_s44.yml (2020-09-29:2020-12-31)  03:36:56 ===
+Loaded checkpoint epoch=60 val_loss=0.1470
+Exporting 94 windows x 793 sites x 3 horizons | forecast_mask=obs+drivers | exclude_time=['Discharge_CMS_lag_7', 'HoboWetDry0.05_lag_7']
+  day1: 74,542 rows (598 with wet/dry label) -> train_val_predictions_day1.csv
+  day2: 74,542 rows (576 with wet/dry label) -> train_val_predictions_day2.csv
+  day3: 74,542 rows (554 with wet/dry label) -> train_val_predictions_day3.csv
+=== holdout scoring: flag_sh  03:37:03 ===
+# RGCN with-sensor site-holdout evaluation
+
+Checkpoint: `data/retrain/flagship/best_model_flag_sh.pt` | predictions: `data/retrain/flagship/predictions_flag_sh`
+
+Held-out reaches (labels masked from training loss; obs-lag inputs intact): [55000900097170, 55000900100137, 55000900099610, 55000900235848, 55000900271029]
+
+## All labeled dates
+
+| Slice | N | Wet frac | Accuracy | ROC-AUC | F1 | Dry recall |
+|---|--:|--:|--:|--:|--:|--:|
+| Pooled (all horizons) | 1,836 | 0.79 | 0.958 | 0.984 | 0.973 | 0.897 |
+| Day 1 | 611 | 0.79 | 0.962 | 0.991 | 0.976 | 0.907 |
+| Day 2 | 612 | 0.79 | 0.959 | 0.985 | 0.974 | 0.900 |
+| Day 3 | 613 | 0.79 | 0.951 | 0.978 | 0.969 | 0.885 |
+| site 55000900097170 | 390 | 0.60 | 0.972 | 0.989 | 0.976 | 0.968 |
+| site 55000900100137 | 342 | 0.32 | 0.845 | 0.920 | 0.773 | 0.850 |
+| site 55000900099610 | 348 | 1.00 | 1.000 | nan | 1.000 | nan |
+| site 55000900235848 | 378 | 1.00 | 0.979 | nan | 0.989 | nan |
+| site 55000900271029 | 378 | 1.00 | 0.984 | nan | 0.992 | nan |
+
+## Val-block dates only
+
+| Slice | N | Wet frac | Accuracy | ROC-AUC | F1 | Dry recall |
+|---|--:|--:|--:|--:|--:|--:|
+| Pooled (all horizons) | 531 | 0.75 | 0.949 | 0.966 | 0.966 | 0.911 |
+| Day 1 | 177 | 0.75 | 0.955 | 0.979 | 0.969 | 0.933 |
+| Day 2 | 177 | 0.75 | 0.949 | 0.969 | 0.966 | 0.911 |
+| Day 3 | 177 | 0.75 | 0.944 | 0.951 | 0.962 | 0.889 |
+| site 55000900097170 | 108 | 0.36 | 0.963 | 0.962 | 0.947 | 0.986 |
+| site 55000900100137 | 102 | 0.35 | 0.775 | 0.839 | 0.676 | 0.833 |
+| site 55000900099610 | 105 | 1.00 | 1.000 | nan | 1.000 | nan |
+| site 55000900235848 | 108 | 1.00 | 1.000 | nan | 1.000 | nan |
+| site 55000900271029 | 108 | 1.00 | 1.000 | nan | 1.000 | nan |
+
+Context: 'All labeled dates' overlaps the training period of *other* sites (standard site-based-split semantics — same era, new site). 'Val-block dates' additionally avoids any temporal overlap with training targets.
+
+Wrote /bluesclues-data/home/michaelmurphy/saas-river-forecasting/results/rgcn_eval_siteholdout_flag_sh_stride1.md
+=== holdout scoring: flag_sh_s43  03:37:05 ===
+# RGCN with-sensor site-holdout evaluation
+
+Checkpoint: `data/retrain/flagship/best_model_flag_sh_s43.pt` | predictions: `data/retrain/flagship/predictions_flag_sh_s43`
+
+Held-out reaches (labels masked from training loss; obs-lag inputs intact): [55000900097170, 55000900100137, 55000900099610, 55000900235848, 55000900271029]
+
+## All labeled dates
+
+| Slice | N | Wet frac | Accuracy | ROC-AUC | F1 | Dry recall |
+|---|--:|--:|--:|--:|--:|--:|
+| Pooled (all horizons) | 1,836 | 0.79 | 0.959 | 0.987 | 0.974 | 0.946 |
+| Day 1 | 611 | 0.79 | 0.961 | 0.989 | 0.975 | 0.946 |
+| Day 2 | 612 | 0.79 | 0.961 | 0.987 | 0.975 | 0.946 |
+| Day 3 | 613 | 0.79 | 0.956 | 0.985 | 0.972 | 0.947 |
+| site 55000900097170 | 390 | 0.60 | 0.967 | 0.986 | 0.972 | 0.981 |
+| site 55000900100137 | 342 | 0.32 | 0.889 | 0.922 | 0.822 | 0.923 |
+| site 55000900099610 | 348 | 1.00 | 1.000 | nan | 1.000 | nan |
+| site 55000900235848 | 378 | 1.00 | 1.000 | nan | 1.000 | nan |
+| site 55000900271029 | 378 | 1.00 | 0.937 | nan | 0.967 | nan |
+
+## Val-block dates only
+
+| Slice | N | Wet frac | Accuracy | ROC-AUC | F1 | Dry recall |
+|---|--:|--:|--:|--:|--:|--:|
+| Pooled (all horizons) | 531 | 0.75 | 0.934 | 0.966 | 0.955 | 0.933 |
+| Day 1 | 177 | 0.75 | 0.938 | 0.972 | 0.958 | 0.933 |
+| Day 2 | 177 | 0.75 | 0.932 | 0.966 | 0.953 | 0.933 |
+| Day 3 | 177 | 0.75 | 0.932 | 0.960 | 0.953 | 0.933 |
+| site 55000900097170 | 108 | 0.36 | 0.972 | 0.952 | 0.960 | 1.000 |
+| site 55000900100137 | 102 | 0.35 | 0.794 | 0.834 | 0.696 | 0.864 |
+| site 55000900099610 | 105 | 1.00 | 1.000 | nan | 1.000 | nan |
+| site 55000900235848 | 108 | 1.00 | 1.000 | nan | 1.000 | nan |
+| site 55000900271029 | 108 | 1.00 | 0.898 | nan | 0.946 | nan |
+
+Context: 'All labeled dates' overlaps the training period of *other* sites (standard site-based-split semantics — same era, new site). 'Val-block dates' additionally avoids any temporal overlap with training targets.
+
+Wrote /bluesclues-data/home/michaelmurphy/saas-river-forecasting/results/rgcn_eval_siteholdout_flag_sh_s43_stride1.md
+=== holdout scoring: flag_sh_s44  03:37:07 ===
+# RGCN with-sensor site-holdout evaluation
+
+Checkpoint: `data/retrain/flagship/best_model_flag_sh_s44.pt` | predictions: `data/retrain/flagship/predictions_flag_sh_s44`
+
+Held-out reaches (labels masked from training loss; obs-lag inputs intact): [55000900097170, 55000900100137, 55000900099610, 55000900235848, 55000900271029]
+
+## All labeled dates
+
+| Slice | N | Wet frac | Accuracy | ROC-AUC | F1 | Dry recall |
+|---|--:|--:|--:|--:|--:|--:|
+| Pooled (all horizons) | 1,836 | 0.79 | 0.916 | 0.965 | 0.946 | 0.844 |
+| Day 1 | 611 | 0.79 | 0.918 | 0.967 | 0.948 | 0.845 |
+| Day 2 | 612 | 0.79 | 0.918 | 0.965 | 0.948 | 0.846 |
+| Day 3 | 613 | 0.79 | 0.912 | 0.963 | 0.943 | 0.840 |
+| site 55000900097170 | 390 | 0.60 | 0.951 | 0.988 | 0.960 | 0.917 |
+| site 55000900100137 | 342 | 0.32 | 0.825 | 0.910 | 0.762 | 0.795 |
+| site 55000900099610 | 348 | 1.00 | 1.000 | nan | 1.000 | nan |
+| site 55000900235848 | 378 | 1.00 | 1.000 | nan | 1.000 | nan |
+| site 55000900271029 | 378 | 1.00 | 0.802 | nan | 0.890 | nan |
+
+## Val-block dates only
+
+| Slice | N | Wet frac | Accuracy | ROC-AUC | F1 | Dry recall |
+|---|--:|--:|--:|--:|--:|--:|
+| Pooled (all horizons) | 531 | 0.75 | 0.879 | 0.955 | 0.914 | 0.933 |
+| Day 1 | 177 | 0.75 | 0.881 | 0.960 | 0.916 | 0.933 |
+| Day 2 | 177 | 0.75 | 0.881 | 0.956 | 0.916 | 0.933 |
+| Day 3 | 177 | 0.75 | 0.876 | 0.948 | 0.911 | 0.933 |
+| site 55000900097170 | 108 | 0.36 | 0.972 | 0.941 | 0.960 | 1.000 |
+| site 55000900100137 | 102 | 0.35 | 0.794 | 0.842 | 0.696 | 0.864 |
+| site 55000900099610 | 105 | 1.00 | 1.000 | nan | 1.000 | nan |
+| site 55000900235848 | 108 | 1.00 | 1.000 | nan | 1.000 | nan |
+| site 55000900271029 | 108 | 1.00 | 0.630 | nan | 0.773 | nan |
+
+Context: 'All labeled dates' overlaps the training period of *other* sites (standard site-based-split semantics — same era, new site). 'Val-block dates' additionally avoids any temporal overlap with training targets.
+
+Wrote /bluesclues-data/home/michaelmurphy/saas-river-forecasting/results/rgcn_eval_siteholdout_flag_sh_s44_stride1.md
+=== ablation sweep table  03:37:09 ===
+done: default (λ 1.0/0.5, fpw 2, h64, lr 1e-3, do 0.1, wd 1e-4)
+done: λ_reg 0.5 / λ_cls 1.0
+done: λ_reg 1.0 / λ_cls 1.0
+done: discharge-only (λ_cls 0)
+done: wet/dry-only (λ_reg 0)
+done: fpw 1 (unweighted BCE)
+done: fpw 4
+done: hidden 32
+done: hidden 128
+done: lr 3e-4
+done: lr 3e-3
+done: dropout 0.0
+done: dropout 0.3
+done: weight_decay 0
+done: weight_decay 1e-3
+done: no static features
+# Flagship RGCN — loss-function ablations + hyperparameter sensitivity
+
+Flagship protocol: phases split rebuilt with guard_days=3 (784 val wet/dry labels), A-strict masking (obs+drivers tail frozen), no lag-7 features, 30-day windows, seed 42, patience-20 early stopping. One factor changed per row. Single-seed noise on Acc is ~±0.02 (multi-seed flagship: 0.963 ± 0.005); differences inside that band demonstrate robustness, not superiority. Classification pooled over horizons 1-3; discharge in linear CMS. Val loss is not comparable across λ rows.
+
+| Configuration | Best ep | Val loss | Acc | ROC-AUC | F1 | Dry recall | NSE d1 | NSE d3 | KGE d3 |
+|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|
+| default (λ 1.0/0.5, fpw 2, h64, lr 1e-3, do 0.1, wd 1e-4) | 35 | 0.136 | 0.957 | 0.985 | 0.974 | 0.907 | 0.860 | 0.757 | 0.788 |
+| λ_reg 0.5 / λ_cls 1.0 | 49 | 0.196 | 0.964 | 0.985 | 0.978 | 0.922 | 0.819 | 0.754 | 0.747 |
+| λ_reg 1.0 / λ_cls 1.0 | 35 | 0.245 | 0.953 | 0.982 | 0.972 | 0.876 | 0.851 | 0.761 | 0.778 |
+| discharge-only (λ_cls 0) | 93 | 0.033 | 0.835 | 0.500 | 0.910 | 0.000 | 0.852 | 0.776 | 0.781 |
+| wet/dry-only (λ_reg 0) | 17 | 0.116 | 0.959 | 0.981 | 0.975 | 0.922 | -0.277 | -0.269 | -1.060 |
+| fpw 1 (unweighted BCE) | 35 | 0.119 | 0.954 | 0.982 | 0.972 | 0.884 | 0.866 | 0.761 | 0.804 |
+| fpw 4 | 66 | 0.155 | 0.962 | 0.985 | 0.977 | 0.953 | 0.855 | 0.773 | 0.815 |
+| hidden 32 | 35 | 0.151 | 0.953 | 0.978 | 0.971 | 0.946 | 0.864 | 0.751 | 0.788 |
+| hidden 128 | 94 | 0.152 | 0.952 | 0.977 | 0.971 | 0.907 | 0.853 | 0.768 | 0.773 |
+| lr 3e-4 | 97 | 0.141 | 0.952 | 0.983 | 0.971 | 0.876 | 0.879 | 0.769 | 0.832 |
+| lr 3e-3 | 12 | 0.134 | 0.962 | 0.985 | 0.977 | 0.922 | 0.847 | 0.741 | 0.802 |
+| dropout 0.0 | 28 | 0.141 | 0.954 | 0.982 | 0.972 | 0.891 | 0.891 | 0.759 | 0.828 |
+| dropout 0.3 | 44 | 0.146 | 0.959 | 0.982 | 0.975 | 0.907 | 0.850 | 0.759 | 0.741 |
+| weight_decay 0 | 35 | 0.126 | 0.959 | 0.985 | 0.975 | 0.899 | 0.866 | 0.759 | 0.801 |
+| weight_decay 1e-3 | 44 | 0.180 | 0.952 | 0.980 | 0.971 | 0.915 | 0.841 | 0.771 | 0.773 |
+| no static features | 31 | 0.161 | 0.953 | 0.979 | 0.971 | 0.907 | 0.880 | 0.715 | 0.817 |
+
+Notes: 'wet/dry-only' trains with no discharge loss (its NSE columns test whether the untrained regression head still tracks flow); 'discharge-only' vice versa (classification columns expected near-chance). fpw = dry-class BCE up-weight. 'no static features' drops all 17 NHDPlus watershed vars (input_dim 35 -> 18).
+
+Wrote /bluesclues-data/home/michaelmurphy/saas-river-forecasting/results/flagship/rgcn_ablation_sweep.md
+=== persistence / matched / copula  03:37:46 ===
+/bluesclues-data/home/michaelmurphy/saas-river-forecasting/benchmarks/flagship_analysis.py:120: RuntimeWarning: Mean of empty slice
+  out[k] = (f"{np.nanmean(a):.3f}" if len(rows) == 1
+/bluesclues-data/home/michaelmurphy/saas-river-forecasting/benchmarks/flagship_analysis.py:120: RuntimeWarning: Mean of empty slice
+  out[k] = (f"{np.nanmean(a):.3f}" if len(rows) == 1
+/bluesclues-data/home/michaelmurphy/saas-river-forecasting/benchmarks/flagship_analysis.py:120: RuntimeWarning: Mean of empty slice
+  out[k] = (f"{np.nanmean(a):.3f}" if len(rows) == 1
+/bluesclues-data/home/michaelmurphy/saas-river-forecasting/benchmarks/flagship_analysis.py:120: RuntimeWarning: Mean of empty slice
+  out[k] = (f"{np.nanmean(a):.3f}" if len(rows) == 1
+/bluesclues-data/home/michaelmurphy/saas-river-forecasting/benchmarks/flagship_analysis.py:120: RuntimeWarning: Mean of empty slice
+  out[k] = (f"{np.nanmean(a):.3f}" if len(rows) == 1
+/bluesclues-data/home/michaelmurphy/saas-river-forecasting/benchmarks/flagship_analysis.py:120: RuntimeWarning: Mean of empty slice
+  out[k] = (f"{np.nanmean(a):.3f}" if len(rows) == 1
+/bluesclues-data/home/michaelmurphy/saas-river-forecasting/benchmarks/flagship_analysis.py:120: RuntimeWarning: Mean of empty slice
+  out[k] = (f"{np.nanmean(a):.3f}" if len(rows) == 1
+/bluesclues-data/home/michaelmurphy/saas-river-forecasting/benchmarks/flagship_analysis.py:120: RuntimeWarning: Mean of empty slice
+  out[k] = (f"{np.nanmean(a):.3f}" if len(rows) == 1
+/bluesclues-data/home/michaelmurphy/saas-river-forecasting/benchmarks/flagship_analysis.py:120: RuntimeWarning: Mean of empty slice
+  out[k] = (f"{np.nanmean(a):.3f}" if len(rows) == 1
+/bluesclues-data/home/michaelmurphy/saas-river-forecasting/benchmarks/flagship_analysis.py:120: RuntimeWarning: Mean of empty slice
+  out[k] = (f"{np.nanmean(a):.3f}" if len(rows) == 1
+/bluesclues-data/home/michaelmurphy/saas-river-forecasting/benchmarks/flagship_analysis.py:120: RuntimeWarning: Mean of empty slice
+  out[k] = (f"{np.nanmean(a):.3f}" if len(rows) == 1
+/bluesclues-data/home/michaelmurphy/saas-river-forecasting/benchmarks/flagship_analysis.py:120: RuntimeWarning: Mean of empty slice
+  out[k] = (f"{np.nanmean(a):.3f}" if len(rows) == 1
+Wrote /bluesclues-data/home/michaelmurphy/saas-river-forecasting/results/flagship/persistence_baseline.md
+/bluesclues-data/home/michaelmurphy/saas-river-forecasting/benchmarks/flagship_analysis.py:121: RuntimeWarning: Mean of empty slice
+  else f"{np.nanmean(a):.3f} ± {np.nanstd(a):.3f}")
+/bluesclues-data/home/michaelmurphy/saas-river-forecasting/.venv/lib/python3.13/site-packages/numpy/lib/_nanfunctions_impl.py:1997: RuntimeWarning: Degrees of freedom <= 0 for slice.
+  var = nanvar(a, axis=axis, dtype=dtype, out=out, ddof=ddof,
+/bluesclues-data/home/michaelmurphy/saas-river-forecasting/benchmarks/flagship_analysis.py:121: RuntimeWarning: Mean of empty slice
+  else f"{np.nanmean(a):.3f} ± {np.nanstd(a):.3f}")
+/bluesclues-data/home/michaelmurphy/saas-river-forecasting/.venv/lib/python3.13/site-packages/numpy/lib/_nanfunctions_impl.py:1997: RuntimeWarning: Degrees of freedom <= 0 for slice.
+  var = nanvar(a, axis=axis, dtype=dtype, out=out, ddof=ddof,
+/bluesclues-data/home/michaelmurphy/saas-river-forecasting/benchmarks/flagship_analysis.py:121: RuntimeWarning: Mean of empty slice
+  else f"{np.nanmean(a):.3f} ± {np.nanstd(a):.3f}")
+/bluesclues-data/home/michaelmurphy/saas-river-forecasting/.venv/lib/python3.13/site-packages/numpy/lib/_nanfunctions_impl.py:1997: RuntimeWarning: Degrees of freedom <= 0 for slice.
+  var = nanvar(a, axis=axis, dtype=dtype, out=out, ddof=ddof,
+/bluesclues-data/home/michaelmurphy/saas-river-forecasting/benchmarks/flagship_analysis.py:121: RuntimeWarning: Mean of empty slice
+  else f"{np.nanmean(a):.3f} ± {np.nanstd(a):.3f}")
+/bluesclues-data/home/michaelmurphy/saas-river-forecasting/.venv/lib/python3.13/site-packages/numpy/lib/_nanfunctions_impl.py:1997: RuntimeWarning: Degrees of freedom <= 0 for slice.
+  var = nanvar(a, axis=axis, dtype=dtype, out=out, ddof=ddof,
+Wrote /bluesclues-data/home/michaelmurphy/saas-river-forecasting/results/flagship/matched_headtohead.md
+Wrote /bluesclues-data/home/michaelmurphy/saas-river-forecasting/results/flagship/copula_dryday.md
+ANALYSIS_QUEUE_DONE 2026-09-02 03:38:15

@@ -82,18 +82,18 @@ uv run python rgcn/inspect_driver_weights.py   # driver weight magnitudes
 
 ## Split variants
 
-> **Canonical model:** the paper's RGCN is the *flagship* configuration
-> `rgcn/flagship/config_q65.yml` — q65 temporal split, 30-day windows, strict
-> `obs+drivers` forecast-tail masking, no lag-7 features (35 inputs incl. 17
-> statics). Seed variants `config_q65_s43.yml` / `config_q65_s44.yml` share
-> its split/array files; the other flagship splits (`config_ph`, `config_q80`,
-> `config_sh`) and the one-factor ablation configs live alongside it under
-> `rgcn/flagship/`. See the repo README's "Canonical results" section for the
-> exact command sequence.
+> **Canonical model (September 13):**
+> `rgcn/correction_sep11/config_q65_availability_s42.yml`, with seed 43/44
+> siblings. q65, 30 calendar-day history, strict forecast-tail masking,
+> 36 inputs including lag-1 status availability and 17 statics. The flag is
+> built from unfilled status targets at load time and frozen with lag-1
+> status across the forecast tail. Shared base arrays retain their existing
+> schema. Current tables: `results/canonical_availability/TABLES.md`.
+> The older split configurations below are historical reference runs.
 
 | Config | Split | Val wet/dry labels |
 |---|---|--:|
-| `rgcn/flagship/config_q65.yml` | **canonical**: temporal cutoff @ q0.65 (2020-09-10), flagship protocol | 968 |
+| `rgcn/flagship/config_q65.yml` | preceding baseline: temporal cutoff @ q0.65 (2020-09-10), flagship protocol | 968 |
 | `rgcn/config.yml` | temporal cutoff @ q0.80 of label dates (2020-09-28) | 576 |
 | `rgcn/config_q65.yml` | temporal cutoff @ q0.65 (2020-09-10) | 968 |
 | `rgcn/config_phases.yml` | 3×12-day blocked holdout (drying / peak-dry / rewetting) with 7-day guard buffers | 784 |

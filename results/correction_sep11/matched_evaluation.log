@@ -1,0 +1,9 @@
+                    Accuracy             ROC-AUC  ... DryRecall     DryF1          
+                        mean       std      mean  ...       std      mean       std
+model variant                                     ...                              
+lstm  availability  0.951175  0.007166  0.980933  ...  0.026631  0.886828  0.016393
+      control       0.930250  0.023757  0.973886  ...  0.058997  0.823340  0.060522
+rgcn  availability  0.963656  0.002914  0.985690  ...  0.005291  0.918961  0.005628
+      control       0.962188  0.013047  0.985940  ...  0.071836  0.911897  0.034283
+
+[4 rows x 12 columns]

@@ -34,7 +34,7 @@ This repository contains the code and analysis for our research on machine learn
 │   ├── inspect_driver_weights.py    # Verify drivers/statics are active in a checkpoint
 │   ├── build_graph.ipynb            # [as-released] Stream network graph construction
 │   ├── train_gnn.ipynb              # [as-released] RGCN model training
-│   ├── rgcn_eval.ipynb              # CANONICAL RGCN evaluation: metrics, stream order, annual dry-day copula
+│   ├── rgcn_eval.ipynb              # CANONICAL RGCN evaluation: metrics, stream order, raw seed-42 observed dry counts
 │   ├── rgcn_eval_results.md         # [as-released] RGCN evaluation results summary
 │   └── rgcn_config.yaml             # [as-released] RGCN model configuration
 ├── benchmarks/
@@ -63,65 +63,70 @@ This repository contains the code and analysis for our research on machine learn
 
 ## Canonical results and how to reproduce them
 
-The paper's canonical neural models are the **flagship RGCN** and the
-**LSTM (all sites)** — both trained on the same one-sided label diet (real
-HOBO labels + discharge-imputed drys; above-threshold gauge days are
-unlabeled) and evaluated on the **q65 temporal split**
-(cutoff 2020-09-10, the 0.65 quantile of wet/dry label dates; training strictly
-precedes validation, so no validation-period date appears in any training
-input). The flagship RGCN uses 30-day windows, 35 input features (incl. 17
-static watershed features, no 7-day lags), and strict forecast-tail masking
-(lagged observations, max-depth, AND meteorological drivers frozen at day *t*
-for the t+1..t+3 tail — no post-issue-day information). Headline numbers
-(seeds 42/43/44; Day-3 forecasts on the daily validation grid, evaluated on
-sensor-verified labels):
+The canonical neural models are now **RGCN + status availability** and
+**corrected all-sites LSTM + status availability** (September 13 decision).
+Both retain dry-only discharge augmentation and distinguish an unknown
+status from a known dry status. The LSTM uses 30 consecutive calendar days,
+exact t+3 targets, causal feature filling, no resampling, and cloned best-epoch
+weights. The RGCN has 36 inputs (including availability and 17 statics),
+no lag-7 features, and strict observation/weather forecast-tail masking.
+The availability indicator is lagged and frozen with the status input.
 
-| Model | N (val) | Accuracy | ROC-AUC | F1 |
-|---|--:|--:|--:|--:|
-| RGCN (flagship, q65, t+3) | 908 | 0.962 ± 0.011 | 0.986 ± 0.002 | 0.976 ± 0.007 |
-| LSTM (all sites, one-sided, t+3) | 956 | 0.955 ± 0.012 | 0.980 ± 0.003 | 0.971 ± 0.008 |
-| Persistence baseline | 908 | 0.966 | — | 0.978 |
+Matched sensor-only q65 validation (cutoff September 10, 2020), exact daily
+t+3, N=908, mean ± sample SD over seeds 42/43/44:
 
-The full campaign (all four splits, held-out-site transfer, ablations,
-persistence, matched cross-model comparison, copula) is consolidated in
-[`results/flagship/FLAGSHIP_RESULTS.md`](results/flagship/FLAGSHIP_RESULTS.md).
+| Model | Accuracy | ROC-AUC | Wet F1 | Dry precision | Dry recall |
+|---|---:|---:|---:|---:|---:|
+| LSTM + availability | 0.951 ± 0.007 | 0.981 ± 0.005 | 0.969 ± 0.005 | 0.858 ± 0.026 | 0.919 ± 0.027 |
+| RGCN + availability | 0.964 ± 0.003 | 0.986 ± 0.001 | 0.977 ± 0.002 | 0.858 ± 0.014 | 0.989 ± 0.005 |
 
-After setting up the environment and data (sections below), reproduce the
-canonical results with:
+The LSTM's full sensor set additionally includes 48 rows outside the RGCN
+network (N=956, accuracy 0.954 ± 0.007). Seed SD measures training variability,
+not sampling uncertainty. See [canonical tables](results/canonical_availability/TABLES.md),
+[raw seed-42 copula outputs](results/canonical_availability/paper/README.md), and
+[correction controls](results/correction_sep11/SUMMARY.md).
+The old flagship reports are historical. The current main RGCN evaluation is
+[`rgcn/rgcn_eval.ipynb`](rgcn/rgcn_eval.ipynb). Paste-ready manuscript changes
+are in [the Introduction, Methods, and Results update guide](context/PAPER_UPDATE_INTRO_METHODS_RESULTS.md).
+
+Fresh-clone preparation and seed-42 reproduction (existing training outputs
+should be preserved; the corrected LSTM runner refuses to overwrite them):
 
 ```bash
-# 1) Canonical RGCN (q65, seed 42; use config_q65_s43.yml / _s44.yml for the
-#    other seeds — split/array stages are shared and only need the base run)
-export RGCN_CONFIG=rgcn/flagship/config_q65.yml
+# Shared q65 arrays remain the base 20 time features + 17 statics.
+# Availability is derived at runtime from unfilled status targets.
+export RGCN_CONFIG=rgcn/correction_sep11/config_q65_availability_s42.yml
 uv run python -m rgcn.pipeline.make_splits
 uv run python -m rgcn.pipeline.prepare_data
-uv run python -m rgcn.pipeline.build_graph        # once per clone
+uv run python -m rgcn.pipeline.build_graph
 CUDA_VISIBLE_DEVICES=0 uv run python -m rgcn.pipeline.train
 CUDA_VISIBLE_DEVICES=0 uv run python -m rgcn.pipeline.export_predictions
-uv run python -m rgcn.pipeline.eval_report        # -> results/flagship/rgcn_eval_flag_q65.md
-
-# 2) Daily-grid (stride-1) Day-3 export over the val period — the canonical
-#    evaluation grid for the headline numbers, and input to the copula
-#    section of rgcn/rgcn_eval.ipynb and the analysis scripts
 CUDA_VISIBLE_DEVICES=0 uv run python -m rgcn.pipeline.export_predictions \
   --eval-stride 1 --day3-range "2020-09-11:2020-12-31"
 
-# 3) Canonical LSTM (all sites): one-sided label diet, no resampling; all
-#    four flagship splits x seeds 42/43/44 (canonical rows = q65) ->
-#    results/flagship/lstm_all/*_1s.*
-CUDA_VISIBLE_DEVICES=0 uv run python benchmarks/lstm_flagship_splits.py --labels dry_only
+uv run python benchmarks/correction_lstm.py --prepare
+CUDA_VISIBLE_DEVICES=0 uv run python benchmarks/correction_lstm.py --seed 42 --variant availability
+# Repeat with RGCN configs *_s43.yml / *_s44.yml and LSTM --seed 43 / 44.
 
-# 4) Persistence baseline + matched cross-model tables; copula on all splits
-uv run python benchmarks/flagship_analysis.py
-uv run python benchmarks/flagship_copula_all.py
+# After all three seed exports exist:
+uv run python benchmarks/availability_products.py  # tables + historical annualization comparison
+uv run python benchmarks/observed_period_copula.py  # raw and calibrated sensitivity comparison
+uv run python benchmarks/paper_canonical_report.py  # canonical raw seed-42 table and figures
+CUDA_VISIBLE_DEVICES=0 uv run python benchmarks/availability_products.py --importance
 ```
 
-The two canonical notebooks display these results (and are committed with
-executed outputs): [`rgcn/rgcn_eval.ipynb`](rgcn/rgcn_eval.ipynb) (RGCN metrics,
-stream order, HOBO vs discretized, and the canonical annual dry-day copula
-experiment — the q65-trained model on the q65 validation period) and
-[`lstm/lstm_all_sites.ipynb`](lstm/lstm_all_sites.ipynb) (canonical LSTM run at
-seed 42 plus the multi-seed summary).
+The availability-aware 15-variant, seed-42 hyperparameter/ablation sweep is
+under `rgcn/availability_sweep/`; [queue status](results/availability_sweep/status.json).
+Its classification scorer uses the same 908 sensor-only daily t+3 targets.
+The old no-statics/hyperparameter results do not transfer automatically.
+The canonical copula uses raw seed-42 probabilities without Platt calibration
+or a rho cap. The alternative Platt + rho cap 0.98 implementation remains in
+`benchmarks/observed_period_copula.py`. The canonical evaluation uses date-specific
+probabilities on exact sensor keys and evaluates
+actual dry counts among observed validation dates, preserving calendar gaps.
+These aggregate rolling t+3 forecasts retrospectively, rather than predicting
+the whole period from one issue date. The earlier 365-day analysis also used
+rolling forecasts; its annualized outputs remain historical diagnostics.
 
 ## Model Weights
 

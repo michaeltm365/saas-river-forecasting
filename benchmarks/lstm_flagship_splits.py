@@ -173,7 +173,7 @@ def train_eval(split: str, seed: int, dfa: pd.DataFrame, feats: list[str],
             vl = crit(model(Xv), yv).item()
         print(f"  epoch {epoch+1:2d}/{HP['epochs']} val={vl:.4f}")
         if vl < best:
-            best, best_state, patience = vl, model.state_dict(), 0
+            best, best_state, patience = vl, {k: v.detach().clone() for k, v in model.state_dict().items()}, 0
         else:
             patience += 1
             if patience >= 5:

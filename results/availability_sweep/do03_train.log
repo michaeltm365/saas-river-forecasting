@@ -1,0 +1,60 @@
+Device: cuda:0 (NVIDIA RTX 6000 Ada Generation)
+Windows: 4944 train / 37 val | epochs=100 | forecast_mask=obs+drivers | exclude_time=['Discharge_CMS_lag_7', 'HoboWetDry0.05_lag_7']
+RGCN_v2 input_dim=36 params=30,146
+epoch   1/100  train=0.2555  val=0.4295  best=0.4295@1  12.8s *best*
+epoch   2/100  train=0.1301  val=0.5602  best=0.4295@1  12.4s
+epoch   3/100  train=0.1133  val=0.5766  best=0.4295@1  12.4s
+epoch   4/100  train=0.1053  val=0.5324  best=0.4295@1  12.9s
+epoch   5/100  train=0.1002  val=0.4694  best=0.4295@1  13.0s
+epoch   6/100  train=0.0955  val=0.3991  best=0.3991@6  12.9s *best*
+epoch   7/100  train=0.0930  val=0.3236  best=0.3236@7  12.9s *best*
+epoch   8/100  train=0.0888  val=0.2808  best=0.2808@8  12.9s *best*
+epoch   9/100  train=0.0865  val=0.2342  best=0.2342@9  13.0s *best*
+epoch  10/100  train=0.0835  val=0.2183  best=0.2183@10  12.9s *best*
+epoch  11/100  train=0.0826  val=0.2114  best=0.2114@11  12.9s *best*
+epoch  12/100  train=0.0810  val=0.1924  best=0.1924@12  12.9s *best*
+epoch  13/100  train=0.0791  val=0.1861  best=0.1861@13  12.9s *best*
+epoch  14/100  train=0.0783  val=0.1812  best=0.1812@14  12.9s *best*
+epoch  15/100  train=0.0762  val=0.1887  best=0.1812@14  12.8s
+epoch  16/100  train=0.0758  val=0.1792  best=0.1792@16  12.3s *best*
+epoch  17/100  train=0.0755  val=0.1803  best=0.1792@16  12.3s
+epoch  18/100  train=0.0752  val=0.1764  best=0.1764@18  12.3s *best*
+epoch  19/100  train=0.0738  val=0.1813  best=0.1764@18  12.3s
+epoch  20/100  train=0.0727  val=0.1834  best=0.1764@18  12.6s
+epoch  21/100  train=0.0720  val=0.1831  best=0.1764@18  12.9s
+epoch  22/100  train=0.0721  val=0.1729  best=0.1729@22  13.0s *best*
+epoch  23/100  train=0.0724  val=0.1868  best=0.1729@22  13.0s
+epoch  24/100  train=0.0717  val=0.1764  best=0.1729@22  13.0s
+epoch  25/100  train=0.0719  val=0.1751  best=0.1729@22  12.9s
+epoch  26/100  train=0.0700  val=0.1800  best=0.1729@22  12.9s
+epoch  27/100  train=0.0694  val=0.1755  best=0.1729@22  13.2s
+epoch  28/100  train=0.0693  val=0.1834  best=0.1729@22  12.8s
+epoch  29/100  train=0.0686  val=0.1775  best=0.1729@22  12.9s
+epoch  30/100  train=0.0690  val=0.1741  best=0.1729@22  13.1s
+epoch  31/100  train=0.0685  val=0.1797  best=0.1729@22  12.9s
+epoch  32/100  train=0.0700  val=0.1856  best=0.1729@22  13.1s
+epoch  33/100  train=0.0686  val=0.1814  best=0.1729@22  12.7s
+epoch  34/100  train=0.0681  val=0.1749  best=0.1729@22  13.0s
+epoch  35/100  train=0.0679  val=0.1695  best=0.1695@35  12.7s *best*
+epoch  36/100  train=0.0680  val=0.1911  best=0.1695@35  12.9s
+epoch  37/100  train=0.0677  val=0.1791  best=0.1695@35  13.1s
+epoch  38/100  train=0.0674  val=0.1782  best=0.1695@35  13.2s
+epoch  39/100  train=0.0676  val=0.1771  best=0.1695@35  13.3s
+epoch  40/100  train=0.0669  val=0.1819  best=0.1695@35  13.4s
+epoch  41/100  train=0.0665  val=0.1790  best=0.1695@35  13.1s
+epoch  42/100  train=0.0667  val=0.1745  best=0.1695@35  12.8s
+epoch  43/100  train=0.0666  val=0.1789  best=0.1695@35  13.4s
+epoch  44/100  train=0.0684  val=0.1805  best=0.1695@35  13.3s
+epoch  45/100  train=0.0666  val=0.1796  best=0.1695@35  13.1s
+epoch  46/100  train=0.0659  val=0.1846  best=0.1695@35  12.7s
+epoch  47/100  train=0.0669  val=0.1846  best=0.1695@35  12.9s
+epoch  48/100  train=0.0660  val=0.1736  best=0.1695@35  13.0s
+epoch  49/100  train=0.0659  val=0.1779  best=0.1695@35  12.9s
+epoch  50/100  train=0.0661  val=0.1796  best=0.1695@35  13.2s
+epoch  51/100  train=0.0655  val=0.1815  best=0.1695@35  12.7s
+epoch  52/100  train=0.0658  val=0.1757  best=0.1695@35  12.9s
+epoch  53/100  train=0.0660  val=0.1740  best=0.1695@35  12.7s
+epoch  54/100  train=0.0657  val=0.1735  best=0.1695@35  12.9s
+epoch  55/100  train=0.0655  val=0.1757  best=0.1695@35  13.0s
+Early stopping at epoch 55 (no improvement for 20).
+Done. Best val=0.1695 @ epoch 35. Saved /bluesclues-data/home/michaelmurphy/saas-river-forecasting/data/retrain/availability_sweep/do03.pt

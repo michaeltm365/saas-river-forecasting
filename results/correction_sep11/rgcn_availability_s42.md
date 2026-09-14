@@ -1,0 +1,43 @@
+# RGCN retrain — evaluation report
+
+Checkpoint: `data/retrain/correction_sep11/rgcn_availability_s42.pt` | split: `window_split_map_flagq65.csv`
+
+## Wet/dry classification (val split)
+
+| Horizon | Group | N | Accuracy | ROC-AUC | F1 |
+|---|---|--:|--:|--:|--:|
+| Day 1 | All | 332 | 0.958 | 0.984 | 0.972 |
+| Day 1 | Headwaters (<=2) | 275 | 0.964 | 0.983 | 0.975 |
+| Day 1 | Tailwaters (>=3) | 57 | 0.930 | 1.000 | 0.956 |
+| Day 2 | All | 322 | 0.963 | 0.981 | 0.975 |
+| Day 2 | Headwaters (<=2) | 265 | 0.970 | 0.981 | 0.980 |
+| Day 2 | Tailwaters (>=3) | 57 | 0.930 | 0.985 | 0.956 |
+| Day 3 | All | 314 | 0.962 | 0.982 | 0.974 |
+| Day 3 | Headwaters (<=2) | 259 | 0.969 | 0.983 | 0.979 |
+| Day 3 | Tailwaters (>=3) | 55 | 0.927 | 0.984 | 0.953 |
+| All Horizons | All | 968 | 0.961 | 0.983 | 0.974 |
+| All Horizons | Headwaters (<=2) | 799 | 0.967 | 0.982 | 0.978 |
+| All Horizons | Tailwaters (>=3) | 169 | 0.929 | 0.989 | 0.955 |
+
+## Stream-order breakdown (All Horizons, val)
+
+| Order | N | Accuracy | ROC-AUC | F1 |
+|--:|--:|--:|--:|--:|
+| 1 | 486 | 0.967 | 0.979 | 0.977 |
+| 2 | 313 | 0.968 | 0.993 | 0.980 |
+| 3 | 169 | 0.929 | 0.989 | 0.955 |
+
+## Confusion matrix (All Horizons, val)
+
+| Observed \ Pred | Dry | Wet |
+|---|--:|--:|
+| **Dry** | 228 | 4 |
+| **Wet** | 34 | 702 |
+
+## Discharge regression (val split, linear CMS)
+
+| Horizon | N | NSE | KGE | RMSE | MAPE% |
+|---|--:|--:|--:|--:|--:|
+| Day 1 | 349 | 0.892 | 0.657 | 0.5522 | 1098.5 |
+| Day 2 | 348 | 0.880 | 0.821 | 0.4055 | 945.8 |
+| Day 3 | 350 | 0.419 | 0.370 | 1.4584 | 1097.3 |

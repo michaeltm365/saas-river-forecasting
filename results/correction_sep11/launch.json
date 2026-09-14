@@ -1,0 +1,38 @@
+{
+  "pid": 3154773,
+  "gpu": 0,
+  "launched": "2026-09-11T00:53:38.471879+00:00",
+  "training_runs": 9,
+  "seeds": [
+    42,
+    43,
+    44
+  ],
+  "source_sha256": {
+    "benchmarks/correction_queue.py": "0b1c8c71a43dda70000e5e99284358258fc26c509e54a12e5e3015bbffe0ad6e",
+    "benchmarks/correction_lstm.py": "ab5c46fc6ac32161731b2a021d04be7be6cd4b222a8db0b649e2d81d270319b9",
+    "benchmarks/lstm_flagship_splits.py": "34b7753fdfc6e8abab5c9f9782718aaa61eba6667a1f6054ee263924d2ed7a74",
+    "benchmarks/correction_evaluate.py": "50bf80c594abdbcf5cb02421a161e6aed5cb136e4423912ee4451e98a67d0a3c",
+    "rgcn/pipeline/eval_hjflp.py": "d8e0b704c6cd4a3619457cd0a09b8d7af5e36e3add68f19917dd33255ff2dcc8",
+    "rgcn/pipeline/build_graph.py": "5567005313049a55f22ba8edb0cf885e093ddf230deca8813da92f9c1870ee4e",
+    "rgcn/pipeline/dataset.py": "7e8baee6dd0b846506a3ab1835c4e4667b8da512e2c2da7c57be52916912f772",
+    "rgcn/pipeline/export_predictions.py": "5052fd02493cbf315033b770f1b2aed491a377d76eb83c7162c3c3c7e000e5d2",
+    "rgcn/pipeline/train.py": "8eadf18e49e693bcdbc0967863a4e06522e4357558647e350b81a8df15047a77",
+    "rgcn/pipeline/prepare_data.py": "41f9b0ec4e0b1114277622fab162d5e0a83ca8338ae4bbd8594ae42b929f23c5",
+    "rgcn/pipeline/windows.py": "879c29494d1153c7eaaa3d4a83c41482eee2de69bf72b41d89e51a923cb1a9e3",
+    "rgcn/pipeline/data.py": "ca77b8fc4270b8db3b4b769f1d1bbe0997167e3e34b9957f0de3ba20a6dde905",
+    "rgcn/pipeline/losses.py": "0f5bcf321d6971b2e5386e27c2d9a102b6f916363dd37fea6b7ff17b33ad17aa",
+    "rgcn/pipeline/config.py": "1539a96a7548852bb96cb8e8640d26ecc6a21c9c96f460d42492f357e00a989c",
+    "rgcn/pipeline/eval_report.py": "2e9ade731084f289de248404a7dca9ee425bf7fff467c778369848ede10a0daa",
+    "rgcn/pipeline/eval_holdout_sites.py": "eba7539bfa270dd29f6817db70b078a50463503a87086e8e3076b438ad788854",
+    "rgcn/pipeline/availability.py": "3e153376d06734715ff990ae83ecbc21d23f1ec2dfd95e7290f331f8c224b4ab",
+    "rgcn/pipeline/__init__.py": "026e644aeab93c1cb932ee5aa95ddd6004fed2c13f3c01e5c20fdc876a71fdaa",
+    "rgcn/pipeline/model.py": "00e677e8161f72b9f4e5c143e84ee3b64356ad54c62dba71b13235f52b140186",
+    "rgcn/pipeline/features.py": "c2bcd4c74aad49abe1babf3597acaeebf1eddd040a70b4aece08e2dac0c012b0",
+    "rgcn/pipeline/masking.py": "e46ee13c3ec34a51bc6bad282e9a8a069e31a61646159c2a6aaec8327e88681d",
+    "rgcn/pipeline/make_splits.py": "329b98fbf118840835755eaceadc1f2faa03c303a85c06bb889dec2220f060b3",
+    "rgcn/correction_sep11/config_q65_availability_s43.yml": "e03b761c85eceb987d6d0c8e21e63b004de2cbf53d08af8cefdcd491e78a345a",
+    "rgcn/correction_sep11/config_q65_availability_s44.yml": "53dc5ac6fcad8a7860e2cc161c31826bd795bfafd7d9f258dcf878c33c21dc78",
+    "rgcn/correction_sep11/config_q65_availability_s42.yml": "073f3d1321a9482e93c43a7bd00d1719d2eee38c9aad3b9ef6a49c74b496ac66"
+  }
+}

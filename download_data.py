@@ -115,6 +115,10 @@ def download_canonical(force: bool) -> int:
         relative = Path(item["local_path"])
         if relative.is_absolute() or ".." in relative.parts:
             raise ValueError(f"Unsafe manifest path: {relative}")
+        if item["local_path"].startswith(("results/paper/baselines/", "results/paper/figure3/", "results/paper/figure3c_")):
+            # The pinned HF release predates the calendar-day HOBO promotion.
+            # Current HOBO predictions and figures are distributed in Git.
+            continue
         dest = REPO_ROOT / relative
         expected = item["sha256"]
         if dest.exists():
@@ -132,7 +136,7 @@ def download_canonical(force: bool) -> int:
     if failures:
         print(f"Canonical bundle has {len(failures)} conflicting local files.")
         return 1
-    print(f"Verified {len(manifest['files'])} canonical release files ({HF_REVISION}).")
+    print(f"Verified applicable canonical release files from a {len(manifest['files'])}-file manifest ({HF_REVISION}).")
     return 0
 
 

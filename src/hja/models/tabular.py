@@ -25,7 +25,7 @@ from hja.splits import RELEASED_SPLITS
 # reserved for post-hoc evaluation only").
 RELEASED_DROP = ["NHDPlusID", "SiteIDCode", "Date",
                  "StreamOrde", "FCode", "n_discharge", "n_water_presence",
-                 "has_data"]
+                 "has_data", "target_date"]
 
 BASELINES_DIR = RESULTS / "paper" / "baselines"
 

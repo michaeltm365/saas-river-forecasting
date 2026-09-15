@@ -5,7 +5,7 @@ HOBO-only input construction with causal depth filling:
 - build_hobo_frame():      HOBO-sensor rows only (lr.ipynb / xgb.ipynb cells
                            5-8; lstm_hobo_sites.ipynb cells 5-6 with
                            include_order=False).
-The target is `wet_dry_next` = wet/dry status 3 rows ahead within site.
+The target is `wet_dry_next` = observed wet/dry status exactly 3 calendar days ahead within reach.
 """
 
 from __future__ import annotations
@@ -49,11 +49,14 @@ def _aux_tables():
     return drivers, statics, degrees, order
 
 
-def build_hobo_frame(include_order: bool = True, include_target_dates: bool = False) -> pd.DataFrame:
+def build_hobo_frame(include_order: bool = True, include_target_dates: bool = False,
+                     keep_unlabeled: bool = False) -> pd.DataFrame:
     """HOBO-only frame.
 
     Depth features are filled forward within reach; leading missing values are zero.
     include_target_dates retains target-date metadata for chronological sequences.
+    keep_unlabeled preserves input history rows without an observed t+3 target;
+    sequence callers must exclude their unlabeled endpoints after windowing.
 
     include_order=True mirrors lr.ipynb / xgb.ipynb cells 5-8 (stream-order
     columns merged in, excluded from features via DROP_COLS and used for
@@ -83,11 +86,30 @@ def build_hobo_frame(include_order: bool = True, include_target_dates: bool = Fa
                           .transform(lambda g: g.ffill()))
     df[OBS_EXTRA_COLS] = df[OBS_EXTRA_COLS].fillna(0)
 
-    df["wet_dry_next"] = df.groupby("NHDPlusID")["wetdry_status"].shift(-3)
-    if include_target_dates:
-        df["target_date"] = df.groupby("NHDPlusID")["Date"].shift(-3)
-    df = df.dropna(subset=["wet_dry_next"])
+    df = attach_hobo_calendar_targets(df, obs)
+    if not keep_unlabeled:
+        df = df.dropna(subset=["wet_dry_next"])
+    if not include_target_dates:
+        df = df.drop(columns="target_date")
     return df.reset_index(drop=True)
+
+
+def attach_hobo_calendar_targets(frame: pd.DataFrame, obs: pd.DataFrame) -> pd.DataFrame:
+    """Look up labels at exactly issue date + 3 days from raw observations,
+    independent of feature joins. Missing target dates stay missing.
+    """
+    truth = obs.loc[obs["HoboWetDry0.05"].notna(),
+                    ["NHDPlusID", "Date", "HoboWetDry0.05"]].copy()
+    truth["Date"] = pd.to_datetime(truth["Date"])
+    if truth.duplicated(["NHDPlusID", "Date"]).any():
+        raise ValueError("HOBO target lookup requires unique reach/date labels")
+    lookup = truth.set_index(["NHDPlusID", "Date"])["HoboWetDry0.05"]
+    frame = frame.copy()
+    frame["target_date"] = pd.to_datetime(frame["Date"]) + pd.Timedelta(days=3)
+    keys = pd.MultiIndex.from_arrays([frame.NHDPlusID, frame.target_date],
+                                     names=["NHDPlusID", "Date"])
+    frame["wet_dry_next"] = lookup.reindex(keys).to_numpy()
+    return frame
 
 
 def feature_frame(df: pd.DataFrame, causal: bool = False):

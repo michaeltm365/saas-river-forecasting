@@ -145,10 +145,10 @@ def main():
     for ext in ['pdf','png','svg']:fig.savefig(OUT/f'figure3.{ext}',dpi=300,bbox_inches='tight')
     plt.close(fig)
     pd.concat(displayed).to_csv(OUT/'displayed_values.csv',index=False)
-    info={'source_commit':'0dd101a','plotting_origin':'50e33bb individual notebooks; current src/hja/importance.py; composite layout reconstructed from Aug 31 Figure 3',
-          'panels':{'a':'LR temporal seed 42, causal filling, coefficients; predicted probabilities verified against canonical snapshot',
-                    'b':'XGBoost temporal seed 42, causal filling, gain; predicted probabilities verified against canonical snapshot',
-                    'c':'HOBO LSTM temporal seed 42, N=742, one permutation per feature, wet F1 decrease; canonical saved importance',
+    info={'source_version':'calendar-day HOBO promotion, seed 42, 2026-09-15','plotting_origin':'50e33bb individual notebooks; current src/hja/importance.py; composite layout reconstructed from Aug 31 Figure 3',
+          'panels':{'a':'LR temporal seed 42, exact t+3 calendar targets, causal filling, coefficients; predicted probabilities verified against canonical snapshot',
+                    'b':'XGBoost temporal seed 42, exact t+3 calendar targets, causal filling, gain; predicted probabilities verified against canonical snapshot',
+                    'c':'HOBO LSTM temporal seed 42, N=735, one permutation per feature, wet F1 decrease; canonical saved importance',
                     'd':'All-sites availability LSTM seed 42, N=956 sensor targets, five permutations per feature, wet F1 decrease; rescored canonical checkpoint'},
           'negative_permutation_values':'Signed values retained in source CSV; negative values zeroed for ranking and plotting',
           'input_sha256':{str(p.relative_to(OUT)):hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(INPUTS.iterdir())}}

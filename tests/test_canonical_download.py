@@ -39,3 +39,13 @@ class CanonicalDownloadTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             with self.assertRaisesRegex(ValueError,'Unsafe manifest path'):
                 self.run_download(Path(d),local='../escape')
+
+    def test_previous_hobo_snapshots_never_replace_current_results(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d)
+            local='results/paper/baselines/lr_splits.json'
+            p=root/local
+            p.parent.mkdir(parents=True)
+            p.write_bytes(b'calendar targets')
+            self.assertEqual(self.run_download(root,local=local,force=True),0)
+            self.assertEqual(p.read_bytes(),b'calendar targets')

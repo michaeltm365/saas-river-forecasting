@@ -36,6 +36,27 @@ class HoboTemporalTests(unittest.TestCase):
         fit, _, _, _ = temporal_masks(targets, '2020-09-15', issues)
         self.assertFalse(fit[0])
 
+class CalendarTargetTests(unittest.TestCase):
+    def test_exact_calendar_lookup_preserves_history_and_missing_targets(self):
+        from hja.data import attach_hobo_calendar_targets
+        obs = pd.DataFrame({'NHDPlusID': [1,1,1,1,2],
+                            'Date': pd.to_datetime(['2020-01-01','2020-01-03','2020-01-04','2020-01-08','2020-01-04']),
+                            'HoboWetDry0.05': [0.,1.,1.,0.,0.]})
+        # The target date can exist in raw observations but be absent after joins.
+        frame = obs.iloc[[0,1,3]][['NHDPlusID','Date']]
+        got = attach_hobo_calendar_targets(frame, obs)
+        self.assertEqual(len(got),3)
+        self.assertEqual(got.wet_dry_next.iloc[0],1.)
+        self.assertTrue(got.wet_dry_next.iloc[1:].isna().all())
+        self.assertTrue((got.target_date-got.Date).eq(pd.Timedelta(days=3)).all())
+
+    def test_ambiguous_observed_labels_rejected(self):
+        from hja.data import attach_hobo_calendar_targets
+        obs = pd.DataFrame({'NHDPlusID':[1,1], 'Date':pd.to_datetime(['2020-01-04']*2),
+                            'HoboWetDry0.05':[0.,1.]})
+        with self.assertRaisesRegex(ValueError,'unique reach/date'):
+            attach_hobo_calendar_targets(obs[['NHDPlusID','Date']],obs)
+
 
 if __name__ == '__main__':
     unittest.main()

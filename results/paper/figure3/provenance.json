@@ -1,20 +1,20 @@
 {
-  "source_commit": "0dd101a",
+  "source_version": "calendar-day HOBO promotion, seed 42, 2026-09-15",
   "plotting_origin": "50e33bb individual notebooks; current src/hja/importance.py; composite layout reconstructed from Aug 31 Figure 3",
   "panels": {
-    "a": "LR temporal seed 42, causal filling, coefficients; predicted probabilities verified against canonical snapshot",
-    "b": "XGBoost temporal seed 42, causal filling, gain; predicted probabilities verified against canonical snapshot",
-    "c": "HOBO LSTM temporal seed 42, N=742, one permutation per feature, wet F1 decrease; canonical saved importance",
+    "a": "LR temporal seed 42, exact t+3 calendar targets, causal filling, coefficients; predicted probabilities verified against canonical snapshot",
+    "b": "XGBoost temporal seed 42, exact t+3 calendar targets, causal filling, gain; predicted probabilities verified against canonical snapshot",
+    "c": "HOBO LSTM temporal seed 42, N=735, one permutation per feature, wet F1 decrease; canonical saved importance",
     "d": "All-sites availability LSTM seed 42, N=956 sensor targets, five permutations per feature, wet F1 decrease; rescored canonical checkpoint"
   },
   "negative_permutation_values": "Signed values retained in source CSV; negative values zeroed for ranking and plotting",
   "input_sha256": {
-    "inputs/lr_importance.csv": "ddf89606fe003583aa043d0ebb07c81e036924bfc6063767e2a30cb0651ec00f",
-    "inputs/lr_temporal_predictions.csv": "85fa1af0950a5fb894522fb5736c2113dc1d3b86f5432e04822964c60e3edf45",
+    "inputs/lr_importance.csv": "56c793158740bd8c632ac9ee4ceb6cab4738852cb7467479ef1e46a80ef6251a",
+    "inputs/lr_temporal_predictions.csv": "9dad2df137deef3363c92761df26969389634d765f5278d227765e2120dbd12f",
     "inputs/lstm_all_importance.csv": "a13a90850a0251e68213f3b5a53c63de91050f1516a829d09e6de2869abfa672",
-    "inputs/lstm_hobo_importance.csv": "c5d4d8af529f1cffa5a6415fd96f03d37e9c38a9652bed0e5f0a24e451a29916",
+    "inputs/lstm_hobo_importance.csv": "baab3350ffb84ed00515f8e2272058b4e8ca93101aea654f4707bf1cddab699e",
     "inputs/lstm_hobo_temporal.json": "a947d7535116d8bbe29b8c66f5bfb80fad8774ab3c906a63e5e505cbc9052ef3",
-    "inputs/xgb_importance.csv": "c3912d19d623162ea4ad2d0e46cc0f0ed06ff9d116b98aa9f4286f3e26a229e9",
-    "inputs/xgb_temporal_predictions.csv": "ab6ef20cc3015c6b9b598e08fb8f005f196fee96fe8f7ba41def9dc4572efded"
+    "inputs/xgb_importance.csv": "79923fd9289aaca2b0a7d2a3b1f34ade69a10f0324ba5bb76bee66bb4d2031a9",
+    "inputs/xgb_temporal_predictions.csv": "72ec9d69e19e455ca828e5927e9d60fa528e05d1c64502f0fad41c6e6f8e82db"
   }
 }

@@ -31,10 +31,12 @@ def main():
         report=json.loads((root/f'baselines/{model}_splits.json').read_text())
         for split,r in report.items():
             df=pd.read_csv(root/f'baselines/{model}_{split}_predictions.csv')
+            assert (pd.to_datetime(df.target_date)-pd.to_datetime(df.date)).eq(pd.Timedelta(days=3)).all()
+            assert len(df)=={'random':515,'temporal':735,'site':576}[split]
             check_baseline(df,r)
     r=json.loads((root/'baselines/lstm_hobo_temporal.json').read_text())
     df=pd.read_csv(root/'baselines/lstm_hobo_temporal_predictions.csv',parse_dates=['issue_date','target_date'])
-    assert len(df)==742 and (df.issue_date>=pd.Timestamp('2020-09-15')).all() and (df.target_date>df.issue_date).all()
+    assert len(df)==735 and (df.issue_date>=pd.Timestamp('2020-09-15')).all() and (df.target_date-df.issue_date).eq(pd.Timedelta(days=3)).all()
     check_baseline(df,r)
     raw=raw_copula_table().set_index('site').sort_index()
     ref=pd.read_csv(root/'copula/raw_seed42_copula.csv').set_index('site').sort_index()

@@ -1,0 +1,8 @@
+{
+  "seed": 42,
+  "forecast_horizon_days": 3,
+  "target_source": "Observed HOBO status at issue date + 3 calendar days; no target imputation",
+  "lstm_history": "30 observation records, including rows with missing future targets",
+  "lstm_device": "cpu",
+  "torch_threads": 2
+}

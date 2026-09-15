@@ -1,6 +1,6 @@
 """HOBO-only LSTM with causal depth filling and chronological evaluation.
 
-Thirty-observation histories predict status three observation records ahead.
+Thirty-observation histories predict status exactly three calendar days ahead.
 Test issue dates begin September 15, 2020; training targets precede that date. The last 20% of distinct pre-test
 target dates are reserved for early stopping before scaling or ADASYN.
 Run: uv run python -m hja.models.lstm_hobo
@@ -53,7 +53,7 @@ def train_eval(frame: pd.DataFrame | None = None, seed: int = 42,
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     # The released LSTM-HOBO frame never merges the stream-order table.
-    frame = build_hobo_frame(include_order=False, include_target_dates=True) if frame is None else frame
+    frame = build_hobo_frame(include_order=False, include_target_dates=True, keep_unlabeled=True) if frame is None else frame
     X_feat, feats = feature_frame(frame, causal=True)
     df = frame.assign(**{c: X_feat[c].values for c in feats})
 
@@ -69,6 +69,12 @@ def train_eval(frame: pd.DataFrame | None = None, seed: int = 42,
         g.Date.to_numpy()[29:len(g)-1]
         for _, g in df.groupby("NHDPlusID") if len(g) > 30
     ])
+    # Preserve all history rows; exclude only windows whose endpoint has no label.
+    labeled = np.isfinite(y_all)
+    X_all, y_all, sites = X_all[labeled], y_all[labeled], sites[labeled]
+    target_dates, issue_dates = target_dates[labeled], issue_dates[labeled]
+    if not ((target_dates - issue_dates) == np.timedelta64(3, "D")).all():
+        raise ValueError("HOBO forecasts require exact three-calendar-day targets")
     train_mask, val_mask, test_mask, inner_cutoff = temporal_masks(target_dates, split_date, issue_dates)
     X_train, y_train = X_all[train_mask], y_all[train_mask]
     X_val, y_val = X_all[val_mask], y_all[val_mask]
@@ -148,7 +154,7 @@ def train_eval(frame: pd.DataFrame | None = None, seed: int = 42,
 
 
 def permutation_importance(result: dict, seed: int = 42) -> tuple[list, list]:
-    """Released permutation importance: shuffle one feature's whole 30-day
+    """Released permutation importance: shuffle one feature's whole 30-observation
     trajectory across test sequences, measure the drop in wet-class F1."""
     from sklearn.metrics import f1_score
 
@@ -171,7 +177,8 @@ def permutation_importance(result: dict, seed: int = 42) -> tuple[list, list]:
 
 
 def main() -> int:
-    res = train_eval()
+    torch.set_num_threads(2)
+    res = train_eval(seed=42, device=torch.device("cpu"))
     m, pc = res["metrics"], res["per_class"]
     print(f"\nAccuracy: {m['Accuracy']:.4f} | ROC-AUC: {m['ROC-AUC']:.4f} | "
           f"Wet F1: {m['WetF1']:.4f} | Dry F1: {m['DryF1']:.4f} (N={m['N']})")

@@ -37,7 +37,7 @@ def main():
     figure_inputs=REPO/'results/paper/figure3/inputs'
     figure_inputs.mkdir(parents=True,exist_ok=True)
     import shutil
-    for name in ('lr_temporal_predictions.csv', 'xgb_temporal_predictions.csv', 'lstm_hobo_importance.csv'):
+    for name in ('lr_temporal_predictions.csv', 'xgb_temporal_predictions.csv', 'lstm_hobo_importance.csv', 'lstm_hobo_temporal.json'):
         shutil.copyfile(out/name, figure_inputs/name)
     (out/'protocol.json').write_text(json.dumps({'seed':42,'forecast_horizon_days':3,'target_source':'Observed HOBO status at issue date + 3 calendar days; no target imputation','lstm_history':'30 observation records, including rows with missing future targets','lstm_device':'cpu','torch_threads':2},indent=2)+'\n')
     print(json.dumps(r['metrics']))

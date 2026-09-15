@@ -1,3 +1,8 @@
-# LSTM feature importance
+# Feature importance
 
-Both LSTM panels measure decrease in wet-class F1. See [Figure 3](figure3/README.md) for methods and provenance.
+- [Figure 3 PNGs](figure3/)
+- [Inputs](feature_importance/inputs/)
+- [Displayed values](feature_importance/displayed_values.csv)
+- [Provenance](feature_importance/provenance.json)
+
+Regenerate with `uv run python benchmarks/figure3.py`.

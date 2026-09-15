@@ -34,7 +34,7 @@ def main():
     ax.figure.tight_layout()
     for ext in ['png','pdf']:ax.figure.savefig(REPO/f'results/paper/figure3c_lstm_hobo.{ext}',dpi=180)
     plt.close(ax.figure)
-    figure_inputs=REPO/'results/paper/figure3/inputs'
+    figure_inputs=REPO/'results/paper/feature_importance/inputs'
     figure_inputs.mkdir(parents=True,exist_ok=True)
     import shutil
     for name in ('lr_temporal_predictions.csv', 'xgb_temporal_predictions.csv', 'lstm_hobo_importance.csv', 'lstm_hobo_temporal.json'):

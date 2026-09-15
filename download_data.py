@@ -31,7 +31,7 @@ SCIENCEBASE_ITEM_URL = (
 )
 
 HF_REPO_ID = "michaeltm365/saas-river-forecasting"
-HF_REVISION = "paper-canonical-2026-09-14"
+HF_REVISION = "main"
 HF_RESOLVE_URL = f"https://huggingface.co/{HF_REPO_ID}/resolve/{HF_REVISION}/{{name}}"
 
 
@@ -115,10 +115,6 @@ def download_canonical(force: bool) -> int:
         relative = Path(item["local_path"])
         if relative.is_absolute() or ".." in relative.parts:
             raise ValueError(f"Unsafe manifest path: {relative}")
-        if item["local_path"].startswith(("results/paper/baselines/", "results/paper/figure3/", "results/paper/figure3c_")):
-            # The pinned HF release predates the calendar-day HOBO promotion.
-            # Current HOBO predictions and figures are distributed in Git.
-            continue
         dest = REPO_ROOT / relative
         expected = item["sha256"]
         if dest.exists():

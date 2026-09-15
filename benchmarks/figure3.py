@@ -19,7 +19,8 @@ from hja.importance import FEATURE_CATEGORIES, RENAME
 
 ROOT=Path(__file__).resolve().parents[1]
 OUT=ROOT/'results/paper/figure3'
-INPUTS=OUT/'inputs'
+DATA=OUT.parent/'feature_importance'
+INPUTS=DATA/'inputs'
 # Colors and the two-by-two layout match the assembled Aug 31 figure.
 COLORS={'Lagged Target':'#e876a4','Degrees':'#e69f00','Drivers':'#2c7bdc',
         'Static':'#008000','Other Obs':'#4b3aab','Other':'#777777'}
@@ -134,7 +135,7 @@ def main():
         single,sax=plt.subplots(figsize=(7.2,4.8));draw(sax,df,title)
         single.supxlabel('Feature importance (0–1 max-scaled)',fontsize=10)
         single.tight_layout(rect=(0,.03,1,1))
-        for ext in ['pdf','png','svg']:single.savefig(OUT/f'figure3_{name}.{ext}',dpi=300,bbox_inches='tight')
+        for ext in ['png']:single.savefig(OUT/f'figure3_{name}.{ext}',dpi=300,bbox_inches='tight')
         plt.close(single)
     legend_labels={'Lagged Target':'Recent water presence','Degrees':'Network degree',
                    'Drivers':'Meteorology','Static':'Static watershed','Other Obs':'Depth observations'}
@@ -142,22 +143,22 @@ def main():
                loc='upper center',bbox_to_anchor=(.5,1.015),ncol=5,frameon=False,fontsize=10)
     fig.supxlabel('Feature importance (0–1 max-scaled within each panel)',fontsize=11,y=.01)
     fig.tight_layout(rect=(0,.04,1,.96),h_pad=2.6,w_pad=3.3)
-    for ext in ['pdf','png','svg']:fig.savefig(OUT/f'figure3.{ext}',dpi=300,bbox_inches='tight')
+    for ext in ['png']:fig.savefig(OUT/f'figure3.{ext}',dpi=300,bbox_inches='tight')
     plt.close(fig)
-    pd.concat(displayed).to_csv(OUT/'displayed_values.csv',index=False)
+    pd.concat(displayed).to_csv(DATA/'displayed_values.csv',index=False)
     info={'source_version':'calendar-day HOBO promotion, seed 42, 2026-09-15','plotting_origin':'50e33bb individual notebooks; current src/hja/importance.py; composite layout reconstructed from Aug 31 Figure 3',
           'panels':{'a':'LR temporal seed 42, exact t+3 calendar targets, causal filling, coefficients; predicted probabilities verified against canonical snapshot',
                     'b':'XGBoost temporal seed 42, exact t+3 calendar targets, causal filling, gain; predicted probabilities verified against canonical snapshot',
                     'c':'HOBO LSTM temporal seed 42, N=735, one permutation per feature, wet F1 decrease; canonical saved importance',
                     'd':'All-sites availability LSTM seed 42, N=956 sensor targets, five permutations per feature, wet F1 decrease; rescored canonical checkpoint'},
           'negative_permutation_values':'Signed values retained in source CSV; negative values zeroed for ranking and plotting',
-          'input_sha256':{str(p.relative_to(OUT)):hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(INPUTS.iterdir())}}
-    (OUT/'provenance.json').write_text(json.dumps(info,indent=2)+'\n')
+          'input_sha256':{str(p.relative_to(DATA)):hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(INPUTS.iterdir())}}
+    (DATA/'provenance.json').write_text(json.dumps(info,indent=2)+'\n')
     print(pd.concat(displayed)[['panel','feature','raw_importance','scaled_importance']].to_string(index=False))
-    for ext in ('pdf', 'png'):
+    for ext in ('png',):
         shutil.copyfile(OUT/f'figure3_lstm_all.{ext}', OUT.parent/f'figure3d_lstm_availability.{ext}')
     shutil.copyfile(INPUTS/'lstm_all_importance.csv', OUT.parent/'lstm_importance.csv')
-    print('Wrote combined figure and all four individual panels as PDF, PNG, and SVG.')
+    print('Wrote combined figure and all four individual panels as PNG.')
 
 if __name__=='__main__':
     import argparse
